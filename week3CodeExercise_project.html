@@ -154,6 +154,13 @@
                     <i data-lucide="undo-2" class="w-4 h-4"></i> Undo (Stack Pop)
                 </button>
             </div>
+            <div id="growth-hierarchy-panel" class="glass-panel rounded-2xl p-4 locked">
+                <h3 class="font-bold text-emerald-400 mb-3 flex items-center gap-2">
+                    <i data-lucide="git-branch" class="w-4 h-4"></i> Growth Hierarchy (Tree)
+                </h3>
+                <div id="growth-hierarchy" class="space-y-1 text-xs text-emerald-200"></div>
+                <p class="text-[10px] text-emerald-400/70 mt-2">Click a planted tile to cycle it through the tree.</p>
+            </div>
         </section>
     </main>
     <script>
@@ -171,6 +178,7 @@
                 pyodideInstance.globals.set("pushAction", pushAction);
                 pyodideInstance.globals.set("updateClimateQueue", updateClimateQueue);
                 pyodideInstance.globals.set("initGardenGrid", initGardenGrid);
+                pyodideInstance.globals.set("updateGrowthHierarchy", updateGrowthHierarchy);
                 await pyodideInstance.runPythonAsync(`
                     import sys
                     from js import document
@@ -202,6 +210,10 @@
                 document.getElementById("view-game").classList.remove("locked");
                 document.getElementById("view-game").classList.add("unlocked");
             }
+            if (feature === "hierarchy") {
+                document.getElementById("growth-hierarchy-panel").classList.remove("locked");
+                document.getElementById("growth-hierarchy-panel").classList.add("unlocked");
+            }
         }
         function updateClimateQueue(events) {
             const container = document.getElementById("climate-queue");
@@ -216,6 +228,16 @@
                 container.appendChild(div);
             });
         }
+        function updateGrowthHierarchy(stages) {
+            const container = document.getElementById("growth-hierarchy");
+            container.innerHTML = "";
+            stages.forEach((stage, i) => {
+                const row = document.createElement("div");
+                row.className = "flex items-center gap-2";
+                row.innerHTML = `<span class="text-base">${stage}</span><span class="text-emerald-400/70">${i < stages.length - 1 ? "↓ child node" : "↻ loops back to root"}</span>`;
+                container.appendChild(row);
+            });
+        }
         function initGardenGrid(rows, cols) {
             gardenPlants = [];
             for (let r = 0; r < rows; r++) {
@@ -227,11 +249,26 @@
             }
             renderGarden();
         }
+        const growthStageEmojis = ["🌱", "🌿"]; // seed -> sapling; 3rd stage uses the crop's own emoji
         function addPlantToGrid(row, col, name) {
             if (gardenPlants[row] && col >= 0 && col < gardenPlants[row].length) {
-                gardenPlants[row][col] = name;
+                gardenPlants[row][col] = { crop: name, emoji: cropEmojis[name] || "🌳", stage: 1 };
                 renderGarden();
             }
+        }
+        function cycleCellStage(row, col) {
+            const cell = gardenPlants[row][col];
+            if (!cell) return;
+            cell.stage = cell.stage >= 3 ? 1 : cell.stage + 1;
+            renderGarden();
+        }
+        function stageEmoji(cell) {
+            if (cell.stage === 1) return growthStageEmojis[0];
+            if (cell.stage === 2) return growthStageEmojis[1];
+            return cell.emoji;
+        }
+        function stageLabel(stage) {
+            return stage === 1 ? "seed" : stage === 2 ? "sapling" : "mature";
         }
         function renderGarden() {
             const grid = document.getElementById("garden-grid");
@@ -241,14 +278,19 @@
                 for (let c = 0; c < gardenPlants[r].length; c++) {
                     const cell = document.createElement("div");
                     cell.className = "aspect-square bg-[#2a3825] rounded-xl flex items-center justify-center text-3xl border border-emerald-800 cursor-pointer hover:border-emerald-400 transition-colors";
-                    cell.textContent = gardenPlants[r][c] ? "🌱" : "⬜";
+                    const cellState = gardenPlants[r][c];
+                    cell.textContent = cellState ? stageEmoji(cellState) : "⬜";
                     cell.onclick = () => {
                         if (!gardenPlants[r][c]) {
                             const crop = document.getElementById("crop-selector").value;
                             if (crop) {
                                 addPlantToGrid(r, c, crop);
-                                pushAction(`Planted ${crop} at (${r}, ${c})`);
+                                pushAction(`Planted ${crop} at (${r}, ${c}) — seed stage`);
                             }
+                        } else {
+                            cycleCellStage(r, c);
+                            const updated = gardenPlants[r][c];
+                            pushAction(`${updated.crop} at (${r}, ${c}) grew to ${stageLabel(updated.stage)} stage`);
                         }
                     };
                     grid.appendChild(cell);
@@ -271,10 +313,12 @@
             document.getElementById("hope-bar").style.width = `${hope}%`;
             document.getElementById("coins-text").innerText = `${coins} Coins`;
         }
+        let cropEmojis = {};
         function addPlantsToDropdown(plants) {
             const select = document.getElementById("crop-selector");
             select.innerHTML = "";
             plants.forEach(([name, emoji, cost]) => {
+                cropEmojis[name] = emoji;
                 const option = document.createElement("option");
                 option.value = name;
                 option.textContent = `${emoji} ${name} (${cost}c)`;
@@ -370,6 +414,10 @@
                     unlockFeature("grid");
                     pushAction("Sanctuary Garden Grid Initialized (2D Array)");
                 }
+                if (key === 5 && code.includes("GrowthStageTree")) {
+                    unlockFeature("hierarchy");
+                    pushAction("Growth Stage Hierarchy Initialized (Tree)");
+                }
             } catch (err) {
                 consoleEl.innerHTML += `<span class="text-red-400">Error: ${err.message}</span>`;
             }
@@ -378,7 +426,36 @@
             1: { title: "Resource Storage and Seed Bag", code: `#insert code here` },
             2: { title: "Action History (Stack)", code: `#insert code here` },
             3: { title: "Climate Queue (FIFO)", code: `#insert code here` },
-            4: { title: "Sanctuary Garden Grid (2D Array)", code: `#insert code here` }
+            4: { title: "Sanctuary Garden Grid (2D Array)", code: `#insert code here` },
+            5: { title: "Growth Stage Hierarchy (Tree)", code: `# Model the plant's growth stages as a hierarchical tree.
+# Each node is a growth stage; its "child" is the next stage a
+# planted tile transitions to when the tile is clicked again.
+
+class GrowthStageTree:
+    def __init__(self, name, emoji):
+        self.name = name
+        self.emoji = emoji
+        self.child = None
+
+    def add_child(self, node):
+        self.child = node
+        return node
+
+    def to_list(self):
+        stages = []
+        node = self
+        while node:
+            stages.append(node.emoji)
+            node = node.child
+        return stages
+
+# Build the tree: Seed -> Sapling -> Mature (cycle loops back to Seed)
+root = GrowthStageTree("Seed", "🌱")
+sapling = root.add_child(GrowthStageTree("Sapling", "🌿"))
+mature = sapling.add_child(GrowthStageTree("Mature", "🌳"))
+
+updateGrowthHierarchy(root.to_list())
+` }
             };
         function loadTopic() {
             const key = document.getElementById("topic-selector").value;
