@@ -450,8 +450,8 @@ class GrowthStageTree:
         return stages
 
 # Build the tree: Seed -> Sapling -> Mature (cycle loops back to Seed)
-root = GrowthStageTree("Seed", "🌱")
-sapling = root.add_child(GrowthStageTree("Sapling", "🌿"))
+root = GrowthStageTree("Seed", "🌰 gti status")
+sapling = root.add_child(GrowthStageTree("Sapling", "🌱"))
 mature = sapling.add_child(GrowthStageTree("Mature", "🌳"))
 
 updateGrowthHierarchy(root.to_list())
