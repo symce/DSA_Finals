@@ -159,7 +159,7 @@
     <script>
         let pyodideInstance = null;
         let savedCode = JSON.parse(localStorage.getItem("savedDSACode")) || {};
-        let gardenPlants = {};
+        let gardenPlants = [];
         let actionStack = [];
         async function initPyodide() {
             if (!pyodideInstance) {
@@ -170,6 +170,7 @@
                 pyodideInstance.globals.set("addPlantsToDropdown", addPlantsToDropdown);
                 pyodideInstance.globals.set("pushAction", pushAction);
                 pyodideInstance.globals.set("updateClimateQueue", updateClimateQueue);
+                pyodideInstance.globals.set("initGardenGrid", initGardenGrid);
                 await pyodideInstance.runPythonAsync(`
                     import sys
                     from js import document
@@ -215,18 +216,43 @@
                 container.appendChild(div);
             });
         }
-        function addPlantToGrid(pos, name) {
-            gardenPlants[pos] = name;
+        function initGardenGrid(rows, cols) {
+            gardenPlants = [];
+            for (let r = 0; r < rows; r++) {
+                const row = [];
+                for (let c = 0; c < cols; c++) {
+                    row.push(null);
+                }
+                gardenPlants.push(row);
+            }
             renderGarden();
+        }
+        function addPlantToGrid(row, col, name) {
+            if (gardenPlants[row] && col >= 0 && col < gardenPlants[row].length) {
+                gardenPlants[row][col] = name;
+                renderGarden();
+            }
         }
         function renderGarden() {
             const grid = document.getElementById("garden-grid");
             grid.innerHTML = "";
-            for (let i = 0; i < 25; i++) {
-                const cell = document.createElement("div");
-                cell.className = "aspect-square bg-[#2a3825] rounded-xl flex items-center justify-center text-3xl border border-emerald-800";
-                cell.textContent = gardenPlants[i] ? "🌱" : "⬜";
-                grid.appendChild(cell);
+            if (!gardenPlants.length) return; // grid not yet built by Topic 4 code
+            for (let r = 0; r < gardenPlants.length; r++) {
+                for (let c = 0; c < gardenPlants[r].length; c++) {
+                    const cell = document.createElement("div");
+                    cell.className = "aspect-square bg-[#2a3825] rounded-xl flex items-center justify-center text-3xl border border-emerald-800 cursor-pointer hover:border-emerald-400 transition-colors";
+                    cell.textContent = gardenPlants[r][c] ? "🌱" : "⬜";
+                    cell.onclick = () => {
+                        if (!gardenPlants[r][c]) {
+                            const crop = document.getElementById("crop-selector").value;
+                            if (crop) {
+                                addPlantToGrid(r, c, crop);
+                                pushAction(`Planted ${crop} at (${r}, ${c})`);
+                            }
+                        }
+                    };
+                    grid.appendChild(cell);
+                }
             }
         }
         function updateResources(water=200, seeds=90, energy=110, hope=65, coins=120) {
@@ -322,27 +348,27 @@
             const code = document.getElementById("code-editor").value.trim();
             const key = parseInt(document.getElementById("topic-selector").value);
             const consoleEl = document.getElementById("output-console");
-      
+
             consoleEl.innerHTML = `<span class="text-amber-400">Running...</span><br>`;
-      
+
             try {
                 await pyodideInstance.runPythonAsync(code);
-           
+
                 if (key === 1 && code.includes("addPlantsToDropdown")) {
                     unlockFeature("resources");
                     pushAction("Resources & Seed Bag Initialized");
                 }
                 if (key === 2 && code.includes("ActionHistoryStack")) {
                     unlockFeature("stack");
-                   
+
                 }
                 if (key === 3 && code.includes("ClimateQueue")) {
                     unlockFeature("queue");
-                 
+
                 }
-                if (key === 4) {
+                if (key === 4 && code.includes("initGardenGrid")) {
                     unlockFeature("grid");
-                  
+                    pushAction("Sanctuary Garden Grid Initialized (2D Array)");
                 }
             } catch (err) {
                 consoleEl.innerHTML += `<span class="text-red-400">Error: ${err.message}</span>`;
@@ -351,8 +377,9 @@
         const topicTemplates = {
             1: { title: "Resource Storage and Seed Bag", code: `#insert code here` },
             2: { title: "Action History (Stack)", code: `#insert code here` },
-            3: { title: "Climate Queue (FIFO)", code: `#insert code here`
-            }};
+            3: { title: "Climate Queue (FIFO)", code: `#insert code here` },
+            4: { title: "Sanctuary Garden Grid (2D Array)", code: `#insert code here` }
+            };
         function loadTopic() {
             const key = document.getElementById("topic-selector").value;
             document.getElementById("code-editor").value = savedCode[key] || topicTemplates[key].code;
@@ -360,7 +387,7 @@
         function switchTab(tab) {
             document.getElementById("view-game").classList.toggle("hidden", tab !== "game");
             document.getElementById("view-code").classList.toggle("hidden", tab !== "code");
-      
+
             document.getElementById("tab-game").classList.toggle("bg-[#283623]", tab === "game");
             document.getElementById("tab-game").classList.toggle("text-emerald-100", tab === "game");
             document.getElementById("tab-code").classList.toggle("bg-[#283623]", tab === "code");
@@ -372,7 +399,7 @@
             renderClimateQueue();
             renderActionStack();
             updateResources();
-      
+            
             const select = document.getElementById("topic-selector");
             Object.keys(topicTemplates).forEach(k => {
                 let opt = document.createElement("option");
