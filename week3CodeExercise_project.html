@@ -184,7 +184,7 @@
                     from js import document
                     class Console:
                         def write(self, text):
-                            if text and text.strip():
+                            if text:
                                 el = document.getElementById("output-console")
                                 if el:
                                     el.innerHTML += text.replace("\\n", "<br>")
@@ -218,6 +218,7 @@
         function updateClimateQueue(events) {
             const container = document.getElementById("climate-queue");
             container.innerHTML = "";
+            if (events.toJs) events = events.toJs();
             events.forEach(event => {
                 const div = document.createElement("div");
                 div.className = "p-3 bg-amber-950/40 border border-amber-900 rounded-xl text-xs";
@@ -231,6 +232,7 @@
         function updateGrowthHierarchy(stages) {
             const container = document.getElementById("growth-hierarchy");
             container.innerHTML = "";
+            if (stages.toJs) stages = stages.toJs();
             stages.forEach((stage, i) => {
                 const row = document.createElement("div");
                 row.className = "flex items-center gap-2";
@@ -317,6 +319,7 @@
         function addPlantsToDropdown(plants) {
             const select = document.getElementById("crop-selector");
             select.innerHTML = "";
+            if (plants.toJs) plants = plants.toJs();
             plants.forEach(([name, emoji, cost]) => {
                 cropEmojis[name] = emoji;
                 const option = document.createElement("option");
@@ -423,14 +426,96 @@
             }
         }
         const topicTemplates = {
-            1: { title: "Resource Storage and Seed Bag", code: `#insert code here` },
-            2: { title: "Action History (Stack)", code: `#insert code here` },
-            3: { title: "Climate Queue (FIFO)", code: `#insert code here` },
-            4: { title: "Sanctuary Garden Grid (2D Array)", code: `#insert code here` },
-            5: { title: "Growth Stage Hierarchy (Tree)", code: `# Model the plant's growth stages as a hierarchical tree.
-# Each node is a growth stage; its "child" is the next stage a
-# planted tile transitions to when the tile is clicked again.
+            1: { title: "Resource Storage and Seed Bag", code: `class Plant:
+    def __init__(self, name, water_need):
+        self.name = name
+        self.water_need = water_need
+        self.health = 100
+        print(f"Plant created: {self.name} (water need: {self.water_need})")
 
+tomato = Plant("Tomato", 15)
+
+updateResources(water=200, seeds=90, energy=110, hope=80, coins=999)
+
+addPlantsToDropdown([
+    ("Malunggay", "🌿", 10),
+    ("Palay", "🌾", 15),
+    ("Luya", "🫚", 8),
+    ("Bawang", "🧄", 5)
+])
+
+print("Resource Storage and Plant dropdown unlocked!")` },
+            2: { title: "Action History (Stack)", code: `class ActionHistoryStack:
+    def __init__(self):
+        self.actionhistory_stack = []
+
+    def push_action(self, action_string):
+        self.actionhistory_stack.append(action_string)
+        pushAction(action_string)
+
+    def pop_action(self):
+        if self.is_empty():
+            return "Empty"
+        return self.actionhistory_stack.pop()
+        
+    def peek(self):
+        if not self.is_empty():
+            print(self.actionhistory_stack[-1])
+        else:
+            return "Empty"
+                
+    def is_empty(self):
+        return len(self.actionhistory_stack) == 0
+
+stack = ActionHistoryStack()
+
+stack.push_action("planted at [1] [2]")
+stack.push_action("planted at [1] [1]")
+
+stack.peek()
+
+print("\\nAction history Stack ready! (push, pop, & peek tested)\\n")
+
+` },
+            3: { title: "Climate Queue (FIFO)", code: `from collections import deque
+
+class ClimateQueue:
+    def __init__(self):
+        self.queue = deque()
+
+    def add_challenge(self, event_name):
+        self.queue.append(event_name)
+
+    def process_hazard(self):
+        if len(self.queue) > 0:
+            return self.queue.popleft()
+        print("Queue is empty!\\n")
+        
+
+q = ClimateQueue()
+
+q.add_challenge("Typhoon")
+    # q.add_challenge("Flood")
+q.add_challenge("Drought")
+
+# q.process_hazard()
+# q.process_hazard()
+# q.process_hazard()
+# q.process_hazard()
+
+updateClimateQueue(list(q.queue))
+print("Climate Queue (FIFO ready!)")
+` },
+            4: { title: "Sanctuary Garden Grid (2D Array)", code: `rows = 5
+cols = 5
+garden_grid = [[None for _ in range(cols)] for _ in range(rows)]
+
+initGardenGrid(rows, cols)
+
+print(f"Garden grid created: {rows}x{cols} 2D list")
+for row in garden_grid:
+    print(row)` },
+            5: { title: "Growth Stage Hierarchy (Tree)", code: `
 class GrowthStageTree:
     def __init__(self, name, emoji):
         self.name = name
@@ -450,7 +535,7 @@ class GrowthStageTree:
         return stages
 
 # Build the tree: Seed -> Sapling -> Mature (cycle loops back to Seed)
-root = GrowthStageTree("Seed", "🌰 gti status")
+root = GrowthStageTree("Seed", "🌰")
 sapling = root.add_child(GrowthStageTree("Sapling", "🌱"))
 mature = sapling.add_child(GrowthStageTree("Mature", "🌳"))
 
