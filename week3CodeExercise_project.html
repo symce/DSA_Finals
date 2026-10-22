@@ -32,6 +32,69 @@
             pointer-events: auto;
             filter: blur(0);
         }
+
+        /* ---------- Skill Tree (BST) ---------- */
+        .sk-scroll { overflow-x: auto; }
+        .sk-canvas { position: relative; }
+        .sk-tier-label {
+            position: absolute; left: 0; right: 0; height: 0;
+            border-top: 1px dashed rgba(120, 143, 114, 0.18);
+        }
+        .sk-tier-label span {
+            position: absolute; left: 2px; top: 2px;
+            font-size: 9px; font-weight: 800; letter-spacing: .08em;
+            color: rgba(110, 231, 183, 0.55); text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .sk-node {
+            position: absolute; transform: translateX(-50%);
+            width: 66px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+            background: none; border: none; padding: 0; color: inherit; cursor: pointer;
+        }
+        .sk-orb {
+            position: relative; width: 50px; height: 50px; border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center; font-size: 22px;
+            border: 2px solid; transition: all .35s ease;
+        }
+        .sk-id {
+            position: absolute; top: -7px; right: -12px;
+            font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 9999px;
+            background: #111a10; border: 1px solid #43533c; color: #a7f3d0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .sk-inner { position: absolute; left: 32px; right: 32px; top: 0; bottom: 0; }
+        .sk-name {
+            font-size: 10px; font-weight: 700; line-height: 1.15; text-align: center; max-width: 66px;
+            background: rgba(25, 34, 24, .94); padding: 1px 3px; border-radius: 4px; /* keeps edges from running through labels */
+        }
+        .sk-pips { font-size: 8px; letter-spacing: 1px; height: 10px; line-height: 10px; }
+        .sk-state-locked .sk-orb { background: #161d14; border-color: #2b3628; }
+        .sk-state-locked .sk-emoji { filter: grayscale(1) opacity(.45); }
+        .sk-state-locked .sk-name { color: rgba(167, 243, 208, .35); }
+        .sk-state-available .sk-orb { background: #2a3825; border-color: #fbbf24; animation: skPulse 1.8s infinite; }
+        .sk-state-available .sk-name { color: #fde68a; }
+        .sk-state-unlocked .sk-orb {
+            background: radial-gradient(circle at 30% 30%, #4ade80, #15803d);
+            border-color: #bbf7d0; box-shadow: 0 0 18px rgba(74, 222, 128, .55);
+        }
+        .sk-state-unlocked .sk-name { color: #d1fae5; }
+        .sk-state-unlocked .sk-pips { color: #86efac; }
+        .sk-state-maxed .sk-orb { border-color: #fcd34d; box-shadow: 0 0 20px rgba(252, 211, 77, .55); }
+        .sk-state-maxed .sk-pips { color: #fcd34d; }
+        .sk-state-available .sk-pips, .sk-state-locked .sk-pips { color: rgba(167, 243, 208, .3); }
+        .sk-selected .sk-orb { outline: 2px solid #ffffff; outline-offset: 3px; }
+        .sk-pop .sk-orb { animation: skPop .55s ease; }
+        @keyframes skPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, .5); }
+            50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); }
+        }
+        @keyframes skPop {
+            0% { transform: scale(.7); }
+            60% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+        .sk-btn { transition: all .2s ease; }
+        .sk-btn:disabled { opacity: .4; cursor: not-allowed; }
     </style>
 </head>
 <body class="min-h-screen p-4 flex flex-col justify-between overflow-x-hidden">
@@ -108,6 +171,7 @@
         <section class="lg:col-span-6 flex flex-col gap-4">
             <div class="flex bg-[#192218] p-1.5 rounded-xl border border-emerald-800/40 w-fit">
                 <button onclick="switchTab('game')" id="tab-game" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-[#283623] text-emerald-100">Interactive Sanctuary</button>
+                <button onclick="switchTab('skills')" id="tab-skills" class="px-4 py-1.5 rounded-lg text-xs font-bold text-emerald-400/80 hover:text-emerald-100">Skill Tree</button>
                 <button onclick="switchTab('code')" id="tab-code" class="px-4 py-1.5 rounded-lg text-xs font-bold text-emerald-400/80 hover:text-emerald-100">Student Code Editor</button>
             </div>
       
@@ -124,6 +188,52 @@
                     </div>
                 </div>
                 <div id="garden-grid" class="grid grid-cols-5 gap-3"></div>
+            </div>
+            <!-- SKILL TREE (strict BST): built by Topic 6 code, drawn with BFS coordinates -->
+            <div id="view-skills" class="hidden flex flex-col gap-3">
+                <div id="skills-lock-hint" class="glass-panel rounded-2xl p-6 text-center">
+                    <div class="text-3xl mb-2">🌳</div>
+                    <h2 class="text-base font-bold text-white">Skill Tree is still dormant</h2>
+                    <p class="text-xs text-emerald-300/80 mt-1">Open the Student Code Editor, pick <span class="font-bold text-emerald-200">Topic 6: Skill Tree (BST, BFS, DFS, Mutation)</span> and run it to grow the tree.</p>
+                </div>
+                <div id="skills-panel" class="glass-panel rounded-2xl p-5 locked">
+                    <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i data-lucide="git-fork" class="w-5 h-5 text-emerald-400"></i> Sanctuary Skill Tree
+                            </h2>
+                            <p class="text-[11px] text-emerald-300/80">Strict BST: <span class="text-emerald-200 font-semibold">left = smaller Skill_ID</span>, <span class="text-emerald-200 font-semibold">right = larger</span>. One prerequisite per skill (its parent).</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="bg-[#1b2219] border border-emerald-800/60 rounded-xl px-3 py-1.5 text-right">
+                                <div class="text-[9px] uppercase tracking-widest font-bold text-yellow-200/80">Coins</div>
+                                <div id="sk-coins" class="text-sm font-extrabold text-yellow-200">0</div>
+                            </div>
+                            <div class="bg-[#1b2219] border border-emerald-800/60 rounded-xl px-3 py-1.5 text-right">
+                                <div class="text-[9px] uppercase tracking-widest font-bold text-emerald-400">Unlocked</div>
+                                <div id="sk-count" class="text-sm font-extrabold text-emerald-200">0 / 0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sk-scroll rounded-xl bg-[#192218]/70 border border-emerald-900/50">
+                        <div id="sk-canvas" class="sk-canvas"></div>
+                    </div>
+
+                    <div class="mt-2 space-y-1 text-[10px] code-font text-emerald-300/70">
+                        <div><span class="text-emerald-400 font-bold">BFS level order:</span> <span id="sk-bfs-order">-</span></div>
+                        <div><span class="text-amber-400 font-bold">Last DFS refund (post-order):</span> <span id="sk-dfs-order">no refund yet</span></div>
+                    </div>
+
+                    <div id="sk-details" class="mt-3 rounded-xl bg-[#1b2219] border border-emerald-800/50 p-4"></div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3" id="sk-branches"></div>
+
+                    <div class="mt-3">
+                        <div class="text-[10px] uppercase tracking-widest font-bold text-emerald-400 mb-1.5">Global stats (recalculated after every node mutation)</div>
+                        <div id="sk-stats" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                    </div>
+                </div>
             </div>
             <div id="view-code" class="glass-panel rounded-2xl p-6 flex flex-col flex-grow hidden">
                 <h2 class="font-bold mb-3 flex items-center gap-2">
@@ -168,6 +278,20 @@
         let savedCode = JSON.parse(localStorage.getItem("savedDSACode")) || {};
         let gardenPlants = [];
         let actionStack = [];
+
+        // ---------- Global game state (recalculated from the Skill Tree) ----------
+        const BASE_CAPS = { water: 200, seeds: 100, energy: 120, hope: 100 };
+        const HARVEST_BASE = 5; // coins earned when a plant reaches the mature stage
+        const gameState = { water: 200, seeds: 90, energy: 110, hope: 65, coins: 120 };
+        let skillStats = { water_cap: 0, seed_cap: 0, energy_cap: 0, hope: 0, yield_pct: 0 };
+
+        // ---------- Skill Tree UI state (the tree itself lives in Python) ----------
+        let skillSnapshot = null;   // latest BST snapshot sent by Python
+        let skillHandlers = null;   // { buy, refund } Python functions
+        let selectedSkillId = null;
+        let lastSkillChange = [];   // node ids mutated by the latest action (pop animation)
+        let lastDfsOrder = [];      // ids refunded by the latest DFS cascade
+
         async function initPyodide() {
             if (!pyodideInstance) {
                 pyodideInstance = await loadPyodide();
@@ -179,6 +303,7 @@
                 pyodideInstance.globals.set("updateClimateQueue", updateClimateQueue);
                 pyodideInstance.globals.set("initGardenGrid", initGardenGrid);
                 pyodideInstance.globals.set("updateGrowthHierarchy", updateGrowthHierarchy);
+                pyodideInstance.globals.set("connectSkillTree", connectSkillTree);
                 await pyodideInstance.runPythonAsync(`
                     import sys
                     from js import document
@@ -213,6 +338,11 @@
             if (feature === "hierarchy") {
                 document.getElementById("growth-hierarchy-panel").classList.remove("locked");
                 document.getElementById("growth-hierarchy-panel").classList.add("unlocked");
+            }
+            if (feature === "skills") {
+                document.getElementById("skills-panel").classList.remove("locked");
+                document.getElementById("skills-panel").classList.add("unlocked");
+                document.getElementById("skills-lock-hint").classList.add("hidden");
             }
         }
         function updateClimateQueue(events) {
@@ -292,28 +422,297 @@
                         } else {
                             cycleCellStage(r, c);
                             const updated = gardenPlants[r][c];
-                            pushAction(`${updated.crop} at (${r}, ${c}) grew to ${stageLabel(updated.stage)} stage`);
+                            if (updated.stage === 3) {
+                                // Mature plants are harvested; the Skill Tree's yield stat scales the payout.
+                                const gain = harvestCoins();
+                                gameState.coins += gain;
+                                syncSkillUI();
+                                pushAction(`${updated.crop} at (${r}, ${c}) matured — harvested +${gain} coins`);
+                            } else {
+                                pushAction(`${updated.crop} at (${r}, ${c}) grew to ${stageLabel(updated.stage)} stage`);
+                            }
                         }
                     };
                     grid.appendChild(cell);
                 }
             }
         }
+        // Resource caps, Hope and harvest yield are derived from the Skill Tree's mutated nodes.
+        function currentCaps() {
+            return {
+                water: BASE_CAPS.water + skillStats.water_cap,
+                seeds: BASE_CAPS.seeds + skillStats.seed_cap,
+                energy: BASE_CAPS.energy + skillStats.energy_cap,
+                hope: BASE_CAPS.hope
+            };
+        }
+        function effectiveHope() {
+            return Math.min(BASE_CAPS.hope, gameState.hope + skillStats.hope);
+        }
+        function harvestCoins() {
+            return Math.max(1, Math.round(HARVEST_BASE * (1 + skillStats.yield_pct / 100)));
+        }
+        function barPct(value, cap) {
+            return Math.max(0, Math.min(100, (value / cap) * 100));
+        }
+        function renderResources() {
+            const caps = currentCaps();
+            const hope = effectiveHope();
+            document.getElementById("water-text").innerText = `${gameState.water} / ${caps.water} L`;
+            document.getElementById("water-bar").style.width = `${barPct(gameState.water, caps.water)}%`;
+            document.getElementById("seeds-text").innerText = `${gameState.seeds} / ${caps.seeds}`;
+            document.getElementById("seeds-bar").style.width = `${barPct(gameState.seeds, caps.seeds)}%`;
+            document.getElementById("energy-text").innerText = `${gameState.energy} / ${caps.energy} Wh`;
+            document.getElementById("energy-bar").style.width = `${barPct(gameState.energy, caps.energy)}%`;
+            document.getElementById("hope-text").innerText = `${hope} / ${caps.hope}`;
+            document.getElementById("hope-bar").style.width = `${barPct(hope, caps.hope)}%`;
+            document.getElementById("coins-text").innerText = `${gameState.coins} Coins`;
+        }
+        function syncSkillUI() {
+            renderResources();
+            renderSkillTree();
+        }
         function updateResources(water=200, seeds=90, energy=110, hope=65, coins=120) {
             if (typeof water === 'object' && water !== null) {
-                const args = water;
-                water = args.water || 200; seeds = args.seeds || 90; energy = args.energy || 110;
-                hope = args.hope || 65; coins = args.coins || 120;
+                const args = water; // Python keyword arguments arrive as one object
+                water = args.water ?? 200; seeds = args.seeds ?? 90; energy = args.energy ?? 110;
+                hope = args.hope ?? 65; coins = args.coins ?? 120;
             }
-            document.getElementById("water-text").innerText = `${water} / 200 L`;
-            document.getElementById("water-bar").style.width = `${(water / 200) * 100}%`;
-            document.getElementById("seeds-text").innerText = `${seeds} / 100`;
-            document.getElementById("seeds-bar").style.width = `${seeds}%`;
-            document.getElementById("energy-text").innerText = `${energy} / 120 Wh`;
-            document.getElementById("energy-bar").style.width = `${(energy / 120) * 100}%`;
-            document.getElementById("hope-text").innerText = `${hope} / 100`;
-            document.getElementById("hope-bar").style.width = `${hope}%`;
-            document.getElementById("coins-text").innerText = `${coins} Coins`;
+            Object.assign(gameState, { water, seeds, energy, hope, coins });
+            syncSkillUI();
+        }
+
+        // =====================================================================
+        // SKILL TREE UI: draws the BST snapshot Python sends (rows/cols come from BFS)
+        // =====================================================================
+        const STAT_INFO = {
+            water_cap:  { icon: "💧", label: "Water capacity", unit: " L" },
+            seed_cap:   { icon: "🌱", label: "Seed capacity",  unit: "" },
+            energy_cap: { icon: "☀️", label: "Solar capacity", unit: " Wh" },
+            hope:       { icon: "💗", label: "Community Hope", unit: "" },
+            yield_pct:  { icon: "🌾", label: "Harvest yield",  unit: "%" }
+        };
+        const SK_ROW_H = 124, SK_TOP = 28, SK_ORB = 50, SK_PAD = 32;
+
+        function escapeHtml(value) {
+            const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+            return String(value).replace(/[&<>"']/g, ch => map[ch]);
+        }
+        function formatEffect(effect) {
+            const parts = Object.entries(effect || {}).map(([key, amount]) => {
+                const info = STAT_INFO[key] || { label: key, unit: "" };
+                return `+${amount}${info.unit} ${info.label}`;
+            });
+            return parts.length ? parts.join(", ") : "No bonus";
+        }
+
+        // Python hands over its two action functions plus the first snapshot of the tree.
+        function connectSkillTree(buyFn, refundFn, snapshotJson) {
+            if (skillHandlers) {
+                // New tree replaces the old one: free old proxies and return what was invested.
+                skillHandlers.buy.destroy?.();
+                skillHandlers.refund.destroy?.();
+                if (skillSnapshot) gameState.coins += skillSnapshot.total_invested;
+            }
+            skillHandlers = {
+                buy: buyFn.copy ? buyFn.copy() : buyFn,
+                refund: refundFn.copy ? refundFn.copy() : refundFn
+            };
+            const snap = JSON.parse(snapshotJson);
+            selectedSkillId = snap.root_id;
+            lastSkillChange = [];
+            lastDfsOrder = [];
+            applySkillSnapshot(snap);
+        }
+
+        // Node mutation happened in Python -> rebuild global stats -> mutate the UI.
+        function applySkillSnapshot(snap) {
+            skillSnapshot = snap;
+            skillStats = Object.assign({ water_cap: 0, seed_cap: 0, energy_cap: 0, hope: 0, yield_pct: 0 }, snap.stats);
+            syncSkillUI();
+        }
+
+        function callSkillHandler(name, ...args) {
+            if (!skillHandlers) return null;
+            try {
+                return JSON.parse(skillHandlers[name](...args));
+            } catch (err) {
+                showToast(`Skill Tree error: ${err.message}`);
+                return null;
+            }
+        }
+        function selectSkill(id) {
+            selectedSkillId = id;
+            renderSkillTree();
+        }
+        function skillBuy(id) {
+            const res = callSkillHandler("buy", id, gameState.coins);
+            if (!res) return;
+            if (!res.ok) { showToast(res.message); return; }
+            gameState.coins -= res.spent;
+            lastSkillChange = [id];
+            pushAction(res.message);
+            showToast(res.message);
+            applySkillSnapshot(res.snapshot);
+        }
+        function skillRefund(id) {
+            const res = callSkillHandler("refund", id);
+            if (!res) return;
+            if (!res.ok) { showToast(res.message); return; }
+            gameState.coins += res.refunded_coins;
+            lastSkillChange = res.refunded_ids;
+            lastDfsOrder = res.refunded_ids;
+            pushAction(res.message);
+            showToast(res.message);
+            applySkillSnapshot(res.snapshot);
+        }
+
+        function renderSkillTree() {
+            const canvas = document.getElementById("sk-canvas");
+            if (!canvas) return;
+            document.getElementById("sk-coins").textContent = gameState.coins;
+            const snap = skillSnapshot;
+            if (!snap) return;
+
+            const byId = {};
+            snap.nodes.forEach(n => { byId[n.id] = n; });
+            document.getElementById("sk-count").textContent = `${snap.unlocked_count} / ${snap.size}`;
+            document.getElementById("sk-bfs-order").textContent = snap.bfs_order.map(id => `#${id}`).join(" → ");
+            document.getElementById("sk-dfs-order").textContent = lastDfsOrder.length
+                ? lastDfsOrder.map(id => `#${id}`).join(" → ")
+                : "no refund yet";
+
+            const xPct = n => ((n.col + 0.5) / snap.columns) * 100;
+            const orbY = n => n.row * SK_ROW_H + SK_TOP + SK_ORB / 2;
+
+            canvas.style.minWidth = `${Math.max(540, snap.columns * 33 + 2 * SK_PAD)}px`;
+            canvas.style.height = `${snap.rows * SK_ROW_H + 8}px`;
+
+            let html = "";
+            // Depth tiers from BFS and the cost multiplier each tier applies
+            for (let t = 0; t < snap.rows; t++) {
+                const sample = snap.nodes.find(n => n.tier === t);
+                html += `<div class="sk-tier-label" style="top:${t * SK_ROW_H}px"><span>Tier ${t} · ×${sample.multiplier}</span></div>`;
+            }
+            // Edges: parent -> left / right child
+            let edges = "";
+            snap.nodes.forEach(n => {
+                [n.left_id, n.right_id].forEach(childId => {
+                    if (childId === null) return;
+                    const c = byId[childId];
+                    const stroke = c.unlocked ? "#4ade80" : (n.unlocked ? "#fbbf24" : "#34412f");
+                    const dash = (!c.unlocked && n.unlocked) ? "5 4" : "none";
+                    edges += `<line x1="${xPct(n)}%" y1="${orbY(n)}" x2="${xPct(c)}%" y2="${orbY(c)}" stroke="${stroke}" stroke-width="${c.unlocked ? 3 : 2}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+                });
+            });
+            html += `<div class="sk-inner"><svg width="100%" height="${snap.rows * SK_ROW_H + 8}" style="position:absolute;left:0;top:0;pointer-events:none">${edges}</svg>`;
+            // Nodes: appearance mirrors the mutated state (is_unlocked / current_rank)
+            snap.nodes.forEach(n => {
+                const state = n.unlocked ? (n.rank >= n.max_rank ? "maxed" : "unlocked")
+                                         : (n.available ? "available" : "locked");
+                const selected = n.id === selectedSkillId ? " sk-selected" : "";
+                const pop = lastSkillChange.includes(n.id) ? " sk-pop" : "";
+                const pips = "●".repeat(n.rank) + "○".repeat(n.max_rank - n.rank);
+                html += `<button type="button" class="sk-node sk-state-${state}${selected}${pop}" style="left:${xPct(n)}%;top:${n.row * SK_ROW_H + SK_TOP}px" onclick="selectSkill(${n.id})" title="#${n.id} ${escapeHtml(n.name)} · Tier ${n.tier} · ${n.cost} coins per rank">
+                    <div class="sk-orb"><span class="sk-emoji">${escapeHtml(n.emoji)}</span><span class="sk-id">#${n.id}</span></div>
+                    <div class="sk-name">${escapeHtml(n.name)}</div>
+                    <div class="sk-pips">${pips}</div>
+                </button>`;
+            });
+            html += `</div>`; // close .sk-inner
+            canvas.innerHTML = html;
+            lastSkillChange = []; // animations already played on this render
+
+            renderSkillDetails(snap, byId);
+            renderSkillBranches(snap);
+            renderSkillStats();
+        }
+
+        function renderSkillDetails(snap, byId) {
+            const box = document.getElementById("sk-details");
+            const n = byId[selectedSkillId] || byId[snap.root_id];
+            if (!n) { box.innerHTML = ""; return; }
+            const parent = n.parent_id === null ? null : byId[n.parent_id];
+            const left = n.left_id === null ? null : byId[n.left_id];
+            const right = n.right_id === null ? null : byId[n.right_id];
+            const ref = x => x ? `#${x.id} ${escapeHtml(x.name)}` : "none";
+            const fact = (label, value) => `<div><span class="text-emerald-400/70">${label}</span> <span class="text-emerald-100 font-semibold">${value}</span></div>`;
+
+            let buyLabel, buyDisabled = true;
+            if (parent && !parent.unlocked) buyLabel = `🔒 Unlock #${parent.id} first`;
+            else if (n.rank >= n.max_rank) buyLabel = "Max rank reached";
+            else if (gameState.coins < n.cost) buyLabel = `Need ${n.cost} coins`;
+            else {
+                buyDisabled = false;
+                buyLabel = n.rank === 0 ? `Unlock · ${n.cost} coins` : `Upgrade to rank ${n.rank + 1} · ${n.cost} coins`;
+            }
+            const refundLabel = n.unlocked
+                ? `Refund branch · +${n.subtree_coins} coins (${n.subtree_unlocked} skill${n.subtree_unlocked === 1 ? "" : "s"})`
+                : "Nothing to refund";
+            const stateLabel = n.unlocked ? (n.rank >= n.max_rank ? "MAX RANK" : "UNLOCKED") : (n.available ? "AVAILABLE" : "LOCKED");
+            const stateColor = n.unlocked ? "text-emerald-300 border-emerald-500/60" : (n.available ? "text-amber-300 border-amber-500/60" : "text-emerald-100/40 border-emerald-900");
+
+            box.innerHTML = `
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">${escapeHtml(n.emoji)}</span>
+                        <div>
+                            <div class="font-bold text-white flex items-center gap-2 flex-wrap">${escapeHtml(n.name)}
+                                <span class="code-font text-[10px] text-emerald-300 bg-[#111a10] border border-emerald-800 rounded-full px-2 py-0.5">Skill_ID ${n.id}</span>
+                            </div>
+                            <div class="text-[11px] text-emerald-300/80">${escapeHtml(formatEffect(n.effect))} per rank</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] font-bold tracking-widest border rounded-full px-2.5 py-0.5 inline-block ${stateColor}">${stateLabel}</div>
+                        <div class="text-[11px] text-emerald-200 mt-1">Rank ${n.rank} / ${n.max_rank}</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-3 text-[11px]">
+                    ${fact("Prerequisite:", parent ? `${ref(parent)} ${parent.unlocked ? "✓" : "✗"}` : "none (root)")}
+                    ${fact("Children:", `◀ ${ref(left)} · ▶ ${ref(right)}`)}
+                    ${fact("BFS tier cost:", `${n.base_cost} × 1.5<sup>${n.tier}</sup> = ${n.cost} coins / rank`)}
+                    ${fact("DFS branch value:", `${n.subtree_coins} coins in ${n.subtree_unlocked} unlocked skill${n.subtree_unlocked === 1 ? "" : "s"}`)}
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="sk-btn px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white" ${buyDisabled ? "disabled" : ""} onclick="skillBuy(${n.id})">${buyLabel}</button>
+                    <button type="button" class="sk-btn px-4 py-2 rounded-xl text-xs font-bold bg-[#3a2326] hover:bg-[#4b2c30] text-rose-200 border border-rose-900" ${n.unlocked ? "" : "disabled"} onclick="skillRefund(${n.id})">${refundLabel}</button>
+                </div>
+                <p class="text-[10px] text-emerald-400/60 mt-2">Refunding a skill makes DFS dive into its left and right subtrees and refund every unlocked descendant bottom-up.</p>`;
+        }
+
+        function renderSkillBranches(snap) {
+            const card = (label, arrow, b) => b
+                ? `<div class="rounded-xl bg-[#1b2219] border border-emerald-800/50 p-3">
+                        <div class="text-[10px] uppercase tracking-widest font-bold text-emerald-400">${arrow} ${label} branch of root</div>
+                        <div class="text-xs text-emerald-200 mt-0.5">#${b.root_id} ${escapeHtml(b.name)}</div>
+                        <div class="mt-1 text-sm font-extrabold text-yellow-200">${b.coins} coins <span class="text-rose-300 text-xs font-bold ml-2">+${b.hope} hope</span></div>
+                        <div class="text-[10px] text-emerald-300/70">${b.count} unlocked skill${b.count === 1 ? "" : "s"} · summed by DFS</div>
+                    </div>`
+                : `<div class="rounded-xl bg-[#1b2219] border border-emerald-800/50 p-3 text-xs text-emerald-300/60">${arrow} ${label} branch is empty</div>`;
+            document.getElementById("sk-branches").innerHTML =
+                card("Left", "◀", snap.branches.left) + card("Right", "▶", snap.branches.right);
+        }
+
+        function renderSkillStats() {
+            const caps = currentCaps();
+            const rows = {
+                water_cap:  { value: `${BASE_CAPS.water} → ${caps.water} L` },
+                seed_cap:   { value: `${BASE_CAPS.seeds} → ${caps.seeds}` },
+                energy_cap: { value: `${BASE_CAPS.energy} → ${caps.energy} Wh` },
+                hope:       { value: `+${skillStats.hope}`, sub: `bar ${effectiveHope()} / ${caps.hope}` },
+                yield_pct:  { value: `+${skillStats.yield_pct}%`, sub: `harvest = ${harvestCoins()} coins` }
+            };
+            document.getElementById("sk-stats").innerHTML = Object.keys(STAT_INFO).map(key => {
+                const info = STAT_INFO[key];
+                const active = (skillStats[key] || 0) > 0;
+                const sub = rows[key].sub || (active ? `+${skillStats[key]}${info.unit} from skills` : "no bonus yet");
+                return `<div class="rounded-xl border p-2.5 ${active ? "bg-emerald-900/30 border-emerald-600/50" : "bg-[#1b2219] border-emerald-900/50"}">
+                    <div class="text-[10px] text-emerald-300/80">${info.icon} ${info.label}</div>
+                    <div class="text-sm font-extrabold ${active ? "text-emerald-200" : "text-emerald-100/70"}">${rows[key].value}</div>
+                    <div class="text-[10px] text-emerald-400/60">${sub}</div>
+                </div>`;
+            }).join("");
         }
         let cropEmojis = {};
         function addPlantsToDropdown(plants) {
@@ -420,6 +819,11 @@
                 if (key === 5 && code.includes("GrowthStageTree")) {
                     unlockFeature("hierarchy");
                     pushAction("Growth Stage Hierarchy Initialized (Tree)");
+                }
+                if (key === 6 && code.includes("SkillBST") && skillSnapshot) {
+                    unlockFeature("skills");
+                    pushAction("Skill Tree Initialized (BST + BFS + DFS)");
+                    showToast("Skill Tree unlocked: open the Skill Tree tab");
                 }
             } catch (err) {
                 consoleEl.innerHTML += `<span class="text-red-400">Error: ${err.message}</span>`;
@@ -540,6 +944,291 @@ sapling = root.add_child(GrowthStageTree("Sapling", "🌱"))
 mature = sapling.add_child(GrowthStageTree("Mature", "🌳"))
 
 updateGrowthHierarchy(root.to_list())
+` },
+            6: { title: "Skill Tree (BST, BFS, DFS, Mutation)", code: `import json
+from collections import deque
+
+# ================================================================
+# 1. STRICT BINARY SEARCH TREE
+#    - every skill has a unique integer skill_id (the BST key)
+#    - left child = smaller skill_id, right child = larger skill_id
+#    - at most 2 children, exactly ONE prerequisite (the parent)
+# ================================================================
+STAT_KEYS = ["water_cap", "seed_cap", "energy_cap", "hope", "yield_pct"]
+
+
+class SkillNode:
+    def __init__(self, skill_id, name, emoji, base_cost, effect, max_rank=1):
+        self.skill_id = skill_id      # BST sort key (Skill_ID / Power_Level)
+        self.name = name
+        self.emoji = emoji
+        self.base_cost = base_cost
+        self.effect = effect          # bonus per rank, e.g. {"water_cap": 25}
+        self.max_rank = max_rank
+
+        self.parent = None            # the single prerequisite
+        self.left = None              # smaller skill_id
+        self.right = None             # larger skill_id
+
+        # State payload: changed in place (NODE MUTATION)
+        self.is_unlocked = False
+        self.current_rank = 0
+
+        # Layout data: written by BFS
+        self.tier = 0
+        self.row = 0
+        self.col = 0
+
+
+class SkillBST:
+    GROWTH = 1.5                      # Final Cost = Base Cost * 1.5 ^ BFS_Tier
+
+    def __init__(self):
+        self.root = None
+        self.size = 0
+        self.columns = 0
+
+    def insert(self, node):
+        if self.root is None:
+            self.root = node
+        else:
+            current = self.root
+            while True:
+                if node.skill_id == current.skill_id:
+                    raise ValueError("Duplicate Skill_ID " + str(node.skill_id))
+                if node.skill_id < current.skill_id:
+                    if current.left is None:
+                        current.left = node
+                        break
+                    current = current.left
+                else:
+                    if current.right is None:
+                        current.right = node
+                        break
+                    current = current.right
+            node.parent = current
+        self.size += 1
+        return node
+
+    def find(self, skill_id):
+        current = self.root
+        while current is not None and current.skill_id != skill_id:
+            current = current.left if skill_id < current.skill_id else current.right
+        return current
+
+    def is_valid_bst(self):
+        stack = [(self.root, float("-inf"), float("inf"))]
+        while stack:
+            node, low, high = stack.pop()
+            if node is None:
+                continue
+            if not (low < node.skill_id < high):
+                return False
+            stack.append((node.left, low, node.skill_id))
+            stack.append((node.right, node.skill_id, high))
+        return True
+
+    # ================================================================
+    # 2. BFS (queue): Row / Column layout + Depth Tier cost scaling
+    # ================================================================
+    def bfs_layout(self):
+        if self.root is None:
+            return []
+        order = []
+        slots = {}
+        queue = deque([(self.root, 0, 0)])        # (node, tier, slot inside the level)
+        while queue:
+            node, tier, slot = queue.popleft()
+            node.tier = tier                       # Root = Tier 0, its children = Tier 1 ...
+            node.row = tier
+            slots[node.skill_id] = slot
+            order.append(node)
+            if node.left:
+                queue.append((node.left, tier + 1, slot * 2))
+            if node.right:
+                queue.append((node.right, tier + 1, slot * 2 + 1))
+
+        # Level-order slots -> columns. Nodes in a row never share a column,
+        # so the drawing has no overlaps and no crossing lines.
+        height = order[-1].tier
+        raw = {}
+        for node in order:
+            raw[node.skill_id] = (2 * slots[node.skill_id] + 1) * 2 ** (height - node.tier) - 1
+        ranks = {c: i for i, c in enumerate(sorted(set(raw.values())))}
+        for node in order:
+            node.col = ranks[raw[node.skill_id]]
+        self.columns = len(ranks)
+        return order
+
+    def cost_of(self, node):
+        return int(node.base_cost * self.GROWTH ** node.tier + 0.5)
+
+    def invested(self, node):
+        return self.cost_of(node) * node.current_rank
+
+    # ================================================================
+    # 3. DFS (stack / post-order): cascading refunds + branch value
+    # ================================================================
+    def dfs(self, start):
+        """Pre-order DFS with an explicit stack: visits a whole branch."""
+        stack = [start] if start else []
+        while stack:
+            node = stack.pop()
+            yield node
+            if node.right:
+                stack.append(node.right)
+            if node.left:
+                stack.append(node.left)
+
+    def branch_value(self, start, resource="coins"):
+        """Total Coins (or Hope) invested in the branch that starts at the node "start"."""
+        total = 0
+        for node in self.dfs(start):
+            if node.is_unlocked:
+                if resource == "coins":
+                    total += self.invested(node)
+                else:
+                    total += node.effect.get(resource, 0) * node.current_rank
+        return total
+
+    def dfs_refund(self, node, refunded):
+        """Post-order: dive down BOTH subtrees first, refund bottom-up."""
+        if node is None:
+            return 0
+        total = self.dfs_refund(node.left, refunded)
+        total += self.dfs_refund(node.right, refunded)
+        if node.is_unlocked:
+            total += self.invested(node)
+            node.is_unlocked = False               # NODE MUTATION
+            node.current_rank = 0
+            refunded.append(node.skill_id)
+        return total
+
+    # ================================================================
+    # 4. NODE MUTATION: buy / refund change the nodes directly
+    # ================================================================
+    def purchase(self, skill_id, coins):
+        node = self.find(skill_id)
+        if node is None:
+            return {"ok": False, "message": "Unknown skill " + str(skill_id)}
+        if node.parent is not None and not node.parent.is_unlocked:
+            return {"ok": False, "message": "Unlock " + node.parent.name + " first (its only prerequisite)"}
+        if node.current_rank >= node.max_rank:
+            return {"ok": False, "message": node.name + " is already at max rank"}
+        cost = self.cost_of(node)
+        if coins < cost:
+            return {"ok": False, "message": "Need " + str(cost) + " coins for " + node.name}
+
+        node.is_unlocked = True                    # NODE MUTATION
+        node.current_rank += 1
+        message = "Unlocked " + node.name + " (rank " + str(node.current_rank) + "/" + str(node.max_rank) + ") for " + str(cost) + " coins"
+        return {"ok": True, "message": message, "spent": cost, "snapshot": self.snapshot()}
+
+    def refund(self, skill_id):
+        node = self.find(skill_id)
+        if node is None or not node.is_unlocked:
+            return {"ok": False, "message": "Nothing to refund"}
+        refunded = []
+        coins = self.dfs_refund(node, refunded)
+        message = "Refunded " + node.name + " branch: " + str(len(refunded)) + " skill(s), +" + str(coins) + " coins"
+        return {"ok": True, "message": message, "refunded_coins": coins,
+                "refunded_ids": refunded, "snapshot": self.snapshot()}
+
+    def recalculate_stats(self):
+        """Global stats are rebuilt from the mutated nodes after every change."""
+        stats = {key: 0 for key in STAT_KEYS}
+        for node in self.dfs(self.root):
+            if node.is_unlocked:
+                for key, amount in node.effect.items():
+                    stats[key] += amount * node.current_rank
+        return stats
+
+    # ---------- data sent to the game UI ----------
+    def branch_summary(self, child):
+        if child is None:
+            return None
+        return {"root_id": child.skill_id, "name": child.name,
+                "coins": self.branch_value(child, "coins"),
+                "hope": self.branch_value(child, "hope"),
+                "count": sum(1 for n in self.dfs(child) if n.is_unlocked)}
+
+    def snapshot(self):
+        order = self.bfs_layout()
+        nodes = []
+        for n in order:
+            nodes.append({
+                "id": n.skill_id, "name": n.name, "emoji": n.emoji,
+                "tier": n.tier, "row": n.row, "col": n.col,
+                "parent_id": n.parent.skill_id if n.parent else None,
+                "left_id": n.left.skill_id if n.left else None,
+                "right_id": n.right.skill_id if n.right else None,
+                "unlocked": n.is_unlocked, "rank": n.current_rank, "max_rank": n.max_rank,
+                "available": n.parent is None or n.parent.is_unlocked,
+                "base_cost": n.base_cost, "cost": self.cost_of(n),
+                "multiplier": round(self.GROWTH ** n.tier, 2),
+                "invested": self.invested(n), "effect": n.effect,
+                "subtree_coins": self.branch_value(n, "coins"),
+                "subtree_unlocked": sum(1 for d in self.dfs(n) if d.is_unlocked),
+            })
+        return {
+            "root_id": self.root.skill_id, "columns": self.columns,
+            "rows": order[-1].tier + 1, "size": self.size,
+            "bfs_order": [n.skill_id for n in order],
+            "unlocked_count": sum(1 for n in order if n.is_unlocked),
+            "total_invested": self.branch_value(self.root, "coins"),
+            "stats": self.recalculate_stats(),
+            "branches": {"left": self.branch_summary(self.root.left),
+                         "right": self.branch_summary(self.root.right)},
+            "nodes": nodes,
+        }
+
+
+# ================================================================
+# Build the Sanctuary skill tree (inserted level by level)
+# id, name, emoji, base cost, effect per rank, max rank
+# ================================================================
+SKILLS = [
+    (50, "Sanctuary Roots", "🌳", 8, {"seed_cap": 10}, 2),
+    (25, "Rainwater Harvest", "💧", 8, {"water_cap": 25}, 3),
+    (75, "Heirloom Seeds", "🌾", 14, {"yield_pct": 10}, 3),
+    (12, "Drip Irrigation", "🚿", 10, {"water_cap": 30}, 2),
+    (37, "Compost Pit", "♻️", 12, {"seed_cap": 10}, 2),
+    (62, "Solar Panels", "☀️", 12, {"energy_cap": 20}, 2),
+    (87, "Market Stall", "🧺", 18, {"yield_pct": 15}, 2),
+    (6, "Mulch Beds", "🍂", 8, {"water_cap": 15}, 1),
+    (18, "Rain Barrels", "🛢️", 10, {"water_cap": 40}, 1),
+    (31, "Seed Library", "📚", 9, {"seed_cap": 20}, 1),
+    (43, "Pollinator Hedge", "🐝", 13, {"yield_pct": 10}, 1),
+    (56, "Battery Bank", "🔋", 11, {"energy_cap": 30}, 1),
+    (68, "Community Kitchen", "🍲", 14, {"hope": 10}, 1),
+    (81, "Farmer Co-op", "🤝", 16, {"hope": 10}, 1),
+    (93, "Export Harvest", "🚜", 20, {"yield_pct": 20}, 1),
+]
+
+tree = SkillBST()
+for skill in SKILLS:
+    tree.insert(SkillNode(*skill))
+
+order = tree.bfs_layout()
+print("Valid BST:", tree.is_valid_bst())
+print("BFS level order:", [n.skill_id for n in order])
+for n in order[:7]:
+    print("Tier", n.tier, "| #" + str(n.skill_id), n.name, "| cost", tree.cost_of(n))
+
+
+# ================================================================
+# Connect the tree to the game: the UI calls these two functions
+# ================================================================
+def on_buy(skill_id, coins):
+    return json.dumps(tree.purchase(int(skill_id), coins))
+
+
+def on_refund(skill_id):
+    return json.dumps(tree.refund(int(skill_id)))
+
+
+connectSkillTree(on_buy, on_refund, json.dumps(tree.snapshot()))
+print("Skill Tree ready! Open the Skill Tree tab.")
 ` }
             };
         function loadTopic() {
@@ -547,13 +1236,13 @@ updateGrowthHierarchy(root.to_list())
             document.getElementById("code-editor").value = savedCode[key] || topicTemplates[key].code;
         }
         function switchTab(tab) {
-            document.getElementById("view-game").classList.toggle("hidden", tab !== "game");
-            document.getElementById("view-code").classList.toggle("hidden", tab !== "code");
-
-            document.getElementById("tab-game").classList.toggle("bg-[#283623]", tab === "game");
-            document.getElementById("tab-game").classList.toggle("text-emerald-100", tab === "game");
-            document.getElementById("tab-code").classList.toggle("bg-[#283623]", tab === "code");
-            document.getElementById("tab-code").classList.toggle("text-emerald-100", tab === "code");
+            ["game", "skills", "code"].forEach(name => {
+                document.getElementById(`view-${name}`).classList.toggle("hidden", tab !== name);
+                const button = document.getElementById(`tab-${name}`);
+                button.classList.toggle("bg-[#283623]", tab === name);
+                button.classList.toggle("text-emerald-100", tab === name);
+                button.classList.toggle("text-emerald-400/80", tab !== name);
+            });
         }
         window.onload = () => {
             lucide.createIcons();
