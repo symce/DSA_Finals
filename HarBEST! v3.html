@@ -1,0 +1,1848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>HarBEST!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Pixelify+Sans:wght@500;700&display=swap">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+<script async src="https://cdn.jsdelivr.net/npm/pyodide@0.26.4/pyodide.js"></script>
+<style>
+/* v3 kit: tokens, chunky pixel-style buttons (2px border, bottom shadow, press-down), one radius, Pixelify Sans for headings and numbers.
+   Layout is plain CSS so the page holds together even if the Tailwind CDN is slow; Tailwind supplies small utilities inside panels. */
+:root{color-scheme:light;--bg:#e4f1ea;--panel:#ffffff;--panel2:#f0f8f3;--ink:#12313a;--muted:#5b7780;--line:#c9ddd2;--edge:#a9c4b6;--accent:#1f8fd1;--leaf:#3a9a49;--leaf-d:#2a7a37;--leaf-soft:#e2f4e3;--gold:#d99a12;--gold-d:#a8760c;--gold-soft:#fff2cf;--gem:#6b4ce6;--bad:#cf4336;--bad-d:#9c2f25;--good:#2f9e55;--r:12px;--shadow:0 1px 0 rgba(18,49,58,.06),0 6px 18px rgba(18,49,58,.07)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 'Nunito',system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+.wrap{max-width:1320px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px))}
+.px{font-family:'Pixelify Sans',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.gem{color:var(--gem)} code{font-family:ui-monospace,monospace;background:var(--panel2);padding:0 4px;border-radius:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+input[type=range],input[type=checkbox]{accent-color:var(--leaf)}
+button{cursor:pointer;font-family:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* HUD */
+.hud{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.logo{display:grid;place-items:center;width:40px;height:40px;border-radius:var(--r);background:var(--leaf);color:#fff;border:2px solid var(--leaf-d);box-shadow:0 3px 0 var(--leaf-d)}
+.hudchip{display:flex;align-items:center;gap:8px;background:var(--panel);border:2px solid var(--line);border-radius:var(--r);padding:5px 12px;box-shadow:var(--shadow);min-width:0}
+.hudchip small{display:block;font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.hudchip.bump{animation:bump .28s ease-out}
+.mini{height:5px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:3px;min-width:92px} .mini i{display:block;height:100%;width:0;background:var(--gem)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:var(--r);border:2px solid var(--edge);background:var(--panel);color:var(--ink);font-weight:800;box-shadow:0 3px 0 var(--edge);transition:transform .06s,box-shadow .06s,filter .12s;user-select:none}
+.btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(3px);box-shadow:0 0 0 var(--edge)}
+.btn.go{background:var(--leaf);border-color:var(--leaf-d);color:#fff;box-shadow:0 3px 0 var(--leaf-d)} .btn.go:active{box-shadow:0 0 0 var(--leaf-d)}
+.btn.gold{background:var(--gold);border-color:var(--gold-d);color:#241a00;box-shadow:0 3px 0 var(--gold-d)} .btn.gold:active{box-shadow:0 0 0 var(--gold-d)}
+.btn.bad{background:var(--bad);border-color:var(--bad-d);color:#fff;box-shadow:0 3px 0 var(--bad-d)} .btn.bad:active{box-shadow:0 0 0 var(--bad-d)}
+.btn.sm{padding:4px 10px;font-size:12px;border-radius:10px;box-shadow:0 2px 0 var(--edge)} .btn.sm:active{transform:translateY(2px);box-shadow:0 0 0 var(--edge)}
+.btn.icon{padding:0;width:40px;height:40px}
+.btn.poor{background:var(--panel2);color:var(--muted);box-shadow:0 2px 0 var(--line);border-color:var(--line)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.grow{flex:1 1 auto}
+
+/* layout */
+.main{display:grid;gap:12px;align-items:start}
+@media (min-width:1024px){.main{grid-template-columns:minmax(0,1.45fr) minmax(340px,1fr)}}
+.stage{position:relative;height:clamp(380px,62vh,700px);border-radius:18px;overflow:hidden;border:2px solid var(--line);box-shadow:var(--shadow);background:#cfeef7}
+#stageBox{position:absolute;inset:0}
+#cv{display:block;touch-action:none;cursor:crosshair}
+.sunbox{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:200px;pointer-events:none;background:rgba(255,255,255,.55);border:2px solid rgba(16,52,60,.2);border-radius:14px;padding:2px 8px 4px;text-align:center}
+.sunbox svg{display:block;width:100%;height:44px}
+.sunbox .num{font-family:'Pixelify Sans',monospace;font-size:14px;color:#10343c;line-height:1}
+.combo{position:absolute;right:14px;top:76px;transform-origin:right center;font-family:'Pixelify Sans',monospace;font-size:34px;line-height:1;color:#fff4c2;-webkit-text-stroke:2px #8a3d0e;paint-order:stroke fill;text-shadow:0 3px 0 #b8531a;opacity:0;pointer-events:none}
+.combo.pop{animation:cpop .18s ease-out}
+.banner{position:absolute;left:0;right:0;top:30%;text-align:center;font-family:'Pixelify Sans',monospace;font-size:46px;color:#fff;-webkit-text-stroke:2px rgba(16,52,60,.55);paint-order:stroke fill;text-shadow:0 4px 0 rgba(0,0,0,.25);opacity:0;pointer-events:none}
+.banner.go{animation:banner 1.5s ease-out forwards}
+.hint{position:absolute;left:12px;right:90px;bottom:10px;font-size:12.5px;font-weight:700;color:#10343c;background:rgba(255,255,255,.72);border-radius:10px;padding:5px 10px;pointer-events:none}
+.rate{position:absolute;right:12px;bottom:10px;font-size:14px;color:#10343c;background:rgba(255,255,255,.72);border-radius:10px;padding:3px 9px;pointer-events:none}
+.overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(207,238,247,.45);cursor:pointer}
+.playbtn{font-family:'Pixelify Sans',monospace;font-size:22px;padding:14px 26px;border-radius:14px}
+.stagebar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:10px}
+.opt{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px}
+.goal-d{margin-top:12px}
+
+/* next-goal strip */
+.goal{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 12px;border-radius:var(--r);border:2px solid var(--edge);background:var(--panel);box-shadow:0 3px 0 var(--edge);color:var(--ink);font-weight:800;transition:transform .06s,box-shadow .06s}
+.goal:active{transform:translateY(3px);box-shadow:0 0 0 var(--edge)}
+.goal .gic{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:var(--gold-soft);color:var(--gold-d)}
+.goal .gl{min-width:0;flex:1}
+.goal .gt{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.goal .gn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goal .gbar{height:7px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:5px}
+.goal .gbar i{display:block;height:100%;width:0;background:var(--accent)}
+.goal.aff{border-color:var(--leaf-d);box-shadow:0 3px 0 var(--leaf-d)} .goal.aff .gbar i{background:var(--leaf)} .goal.aff .gic{background:var(--leaf-soft);color:var(--leaf-d)}
+.goal.pulse{animation:pulse1 1.1s ease-out 1}
+.goal-m{display:none}
+
+/* panel + mobile bottom sheet */
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:12px;min-width:0}
+#sheetHead{display:none}
+#panelBody{max-height:min(68vh,720px);overflow-y:auto;padding:2px 4px 2px 0}
+@media (max-width:1023.98px){
+  .wrap{padding-bottom:140px}
+  .goal-d{display:none} .goal-m{display:flex}
+  #panel{position:fixed;left:0;right:0;bottom:0;z-index:15;border-radius:18px 18px 0 0;border-bottom:0;padding:0 12px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px rgba(0,0,0,.18)}
+  #sheetHead{display:block}
+  #sheetHandle{display:block;width:100%;height:22px;background:none;border:0;padding:0}
+  #sheetHandle .grip{display:block;width:44px;height:5px;border-radius:99px;background:var(--edge);margin:8px auto 0}
+  #sheetBody{display:none;margin-top:10px}
+  #panel.open #sheetBody{display:block}
+  #panel.open #panelBody{max-height:min(56vh,520px)}
+}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab{flex:1;position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 8px;border-radius:var(--r);border:2px solid var(--edge);background:var(--panel);box-shadow:0 2px 0 var(--edge);font-weight:800;font-size:12.5px;color:var(--muted)}
+.tab:active{transform:translateY(2px);box-shadow:0 0 0 var(--edge)}
+.tab.on{background:var(--leaf);border-color:var(--leaf-d);color:#fff;box-shadow:0 2px 0 var(--leaf-d)}
+.tab.icon{flex:0 0 46px}
+.tab .dot{position:absolute;top:-6px;right:-5px;width:13px;height:13px;border-radius:50%;background:var(--bad);border:2px solid var(--panel)}
+
+/* upgrade cards */
+.ucard{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:2px solid var(--line);border-radius:var(--r);background:var(--panel2);min-width:0}
+.ucard.buy{border-color:var(--leaf);background:var(--leaf-soft)}
+.ucard.lock{opacity:.62;border-style:dashed}
+.ucard.own{opacity:.7}
+.ucard .tile{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;color:#fff;border:2px solid rgba(0,0,0,.22);box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+.ucard .nm{font-family:'Pixelify Sans',monospace;font-size:14px;line-height:1.15}
+.ucard .ef{font-size:12px;color:var(--muted);line-height:1.25;margin-top:2px}
+.ucard .pr{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:74px}
+.ucard .pbar{width:74px;height:4px;border-radius:99px;background:var(--line);overflow:hidden} .ucard .pbar i{display:block;height:100%;background:var(--accent)}
+.ucard .need{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--muted);text-align:right;max-width:110px}
+.ucard.hl{animation:hl 1.7s ease-out}
+.ucard.onroute{outline:3px solid var(--accent);outline-offset:1px}
+.rt{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:8px;border:2px solid var(--line);background:var(--panel);color:var(--muted)} .rt:hover{color:var(--accent);border-color:var(--accent)}
+.node{text-align:left;padding:9px 11px;border-radius:var(--r);border:2px solid var(--line);background:var(--panel);min-width:0}
+.node.buy{border-color:var(--leaf);background:var(--leaf-soft)} .node.poor{opacity:.85} .node.own{background:var(--panel2);color:var(--leaf);border-color:var(--line)}
+details.sec{border:2px solid var(--line);border-radius:var(--r);background:var(--panel2);margin-bottom:10px}
+details.sec>summary{cursor:pointer;list-style:none;padding:8px 12px;font-family:'Pixelify Sans',monospace;font-size:14px;display:flex;align-items:center;justify-content:space-between;border-radius:var(--r)}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::after{content:'▾';opacity:.6} details.sec[open]>summary::after{content:'▴'}
+details.sec>.secb{padding:2px 12px 12px}
+
+/* shared bits */
+.card2{background:var(--panel2);border:2px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0}
+.chip{display:inline-flex;gap:5px;align-items:center;padding:3px 10px;border-radius:99px;border:2px solid var(--line);background:var(--panel);font-size:12px;font-weight:800;color:var(--muted)}
+.chip.on{background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf-d)}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{padding:4px 10px;font-size:12px;font-weight:800;color:var(--muted);background:var(--panel);border:0}
+.seg button.on{background:var(--leaf);color:#fff}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden} .bar i{display:block;height:100%;background:var(--gem)}
+.note{display:flex;gap:6px;align-items:center;font-size:12px;background:var(--panel2);border:2px solid var(--line);border-radius:10px;padding:5px 10px}
+.gold-note{background:var(--gold-soft);border-color:var(--gold)}
+.ach{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border-radius:10px;border:2px solid var(--line);opacity:.6;min-width:0}
+.ach.got{opacity:1;background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf-d)}
+.field{background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:4px 8px;color:var(--ink)}
+.out{margin-top:8px;background:var(--panel2);color:var(--ink);border:2px solid var(--line);border-radius:8px;padding:8px;font-size:12px;white-space:pre-wrap;min-height:34px;overflow-x:auto}
+.swatch{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+.node,.rt{cursor:pointer}
+
+/* toasts, modal, coach */
+#toasts{position:fixed;z-index:30;bottom:16px;right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:8px;align-content:end;width:min(300px,calc(100vw - 32px));pointer-events:none}
+#toasts .toast{pointer-events:auto}
+@media (max-width:1023.98px){
+  #toasts{top:auto;right:12px;left:12px;width:auto;bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  body:has(#panel.open) #toasts{top:calc(env(safe-area-inset-top,0px) + 8px);bottom:auto;left:auto;width:min(300px,calc(100vw - 32px))}
+}
+
+.toast{display:flex;gap:10px;align-items:center;background:var(--leaf-soft);color:var(--leaf-d);border:2px solid var(--leaf);border-radius:var(--r);padding:9px 12px;box-shadow:var(--shadow);animation:pop .25s ease-out}#modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(8,24,30,.55);padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.mcard{width:min(420px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+.mcard td{padding:4px 0;border-bottom:1px dashed var(--line)} .mcard .r{text-align:right;padding-left:10px;color:var(--muted)} .mcard td.px{color:var(--ink)}
+.rowrv{opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s} .rowrv.in{opacity:1;transform:none}
+.tot{opacity:0;transform:scale(.6)} .tot.in{opacity:1;transform:none;animation:totpop .45s cubic-bezier(.2,1.6,.4,1)}
+.stamp{display:inline-block;margin-left:8px;padding:0 8px;border:3px solid var(--bad);border-radius:8px;color:var(--bad);font-family:'Pixelify Sans',monospace;font-size:15px;vertical-align:middle;transform:rotate(-8deg);animation:stampin .35s cubic-bezier(.2,1.8,.4,1)}
+#coach{position:fixed;z-index:18;left:0;top:0;max-width:min(250px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:2px solid var(--line);border-radius:var(--r);padding:9px 32px 9px 12px;font-weight:800;font-size:13px;line-height:1.3;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s}
+#coach.on{opacity:1;pointer-events:auto}
+#coach::after{content:'';position:absolute;left:var(--ax,50%);width:12px;height:12px;background:var(--panel);transform:translateX(-50%) rotate(45deg)}
+#coach[data-side="top"]::after{bottom:-9px;border-right:2px solid var(--line);border-bottom:2px solid var(--line)} #coach[data-side="bottom"]::after{top:-9px;border-left:2px solid var(--line);border-top:2px solid var(--line)}
+#coach button{position:absolute;top:5px;right:5px;width:22px;height:22px;display:grid;place-items:center;border:0;border-radius:6px;background:rgba(18,49,58,.1);color:inherit;padding:0}
+#coach button:focus-visible{outline-color:var(--gold)}
+#coinCv{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:25}
+
+@keyframes pop{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bump{50%{transform:scale(1.12)}}
+@keyframes cpop{from{transform:scale(1.35)}to{transform:scale(1)}}
+@keyframes banner{0%{opacity:0;transform:translateY(14px) scale(.8)}20%{opacity:1;transform:scale(1.08)}65%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-12px)}}
+@keyframes pulse1{0%{box-shadow:0 0 0 0 rgba(58,154,73,.75),0 3px 0 var(--leaf-d)}100%{box-shadow:0 0 0 16px rgba(58,154,73,0),0 3px 0 var(--leaf-d)}}
+@keyframes hl{0%,60%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes totpop{0%{transform:scale(.5)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes stampin{from{transform:rotate(-8deg) scale(2.2);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hud">
+    <div class="brand">
+      <span class="logo"><i data-lucide="droplets" class="w-5 h-5"></i></span>
+      <div class="px text-xl leading-none">HarBEST!</div>
+    </div>
+    <div class="hudchip" id="chipMoney"><i data-lucide="coins" class="w-4 h-4" style="color:var(--gold)"></i><div><small>Money</small><b class="px text-base" id="hMoney">$0</b></div></div>
+    <div class="hudchip"><i data-lucide="sun" class="w-4 h-4" style="color:var(--accent)"></i><div><small>Day</small><b class="px text-base" id="hDay">Day 1</b></div></div>
+    <div class="hudchip" id="chipDia" hidden title="Diamonds this run. Earn more to reach the next goal."><i data-lucide="gem" class="w-4 h-4 gem"></i><div><small>Diamonds</small><b class="px text-base"><span id="hDia">◆ 0/2</span> <span class="opacity-60 text-xs" id="hDiaNext">$5K</span></b><div class="mini"><i id="hDiaBar"></i></div></div></div>
+    <button class="btn icon" id="btnMute" aria-label="Mute sound" aria-pressed="false"></button>
+    <button class="btn icon" id="btnMenu" aria-label="Menu" title="Menu"><i data-lucide="settings" class="w-5 h-5"></i></button>
+  </header>
+
+  <main class="main">
+    <section class="min-w-0">
+      <div class="stage" id="stage">
+        <div id="stageBox"><canvas id="cv"></canvas></div>
+        <div class="sunbox" role="timer" aria-label="Time left in the day">
+          <svg viewBox="0 0 200 44" aria-hidden="true"><path d="M10 40 Q100 -34 190 40" fill="none" stroke="rgba(16,52,60,.35)" stroke-width="2" stroke-dasharray="3 4"/><line x1="4" y1="41" x2="196" y2="41" stroke="rgba(16,52,60,.3)" stroke-width="2"/><circle id="sunDot" cx="10" cy="40" r="7" fill="#ffc83a" stroke="#c98a00" stroke-width="2"/></svg>
+          <div class="num" id="hTime">30s</div>
+        </div>
+        <div class="combo" id="combo" aria-hidden="true"></div>
+        <div class="banner" id="dayBanner" aria-hidden="true"></div>
+        <div class="hint" id="hint">Move the ring over crops to water them. Touch ripe crops to pick them.</div>
+        <div class="rate px" id="hRate">$0/s</div>
+        <div class="overlay" id="overlay"><button class="btn go playbtn" tabindex="-1"><i data-lucide="play" class="w-6 h-6"></i><span id="ovLabel">Play day 1</span></button></div>
+      </div>
+      <div class="stagebar">
+        <button id="btnPlay" class="btn go"><i data-lucide="play" class="w-4 h-4"></i> Play day</button>
+        <span id="stageOpts" class="contents" hidden>
+          <button id="btnSpeed" class="btn" title="Game speed"><i data-lucide="zap" class="w-4 h-4"></i> Speed <span id="hSpeed">1×</span></button>
+          <label class="opt"><input type="checkbox" id="chkAuto"> Start next day automatically</label>
+          <label class="opt" title="After each day, a min-heap buys the cheapest open upgrade until money runs out"><input type="checkbox" id="chkGreedy"> Auto-buy cheapest upgrades</label>
+        </span>
+      </div>
+      <div class="goal-d" id="goalD"></div>
+    </section>
+
+    <aside class="panel" id="panel">
+      <div id="sheetHead">
+        <button id="sheetHandle" aria-expanded="false" aria-controls="sheetBody" aria-label="Expand panel"><span class="grip"></span></button>
+        <div class="goal-m" id="goalM"></div>
+      </div>
+      <div id="sheetBody">
+        <nav class="tabs" id="tabsNav" aria-label="Game panels" hidden></nav>
+        <div id="panelBody"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="coach" role="status" aria-live="polite"><span id="coachTx"></span><button id="coachX" aria-label="Dismiss tip"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>
+<canvas id="coinCv" aria-hidden="true"></canvas>
+<div id="modal" hidden><div class="mcard" id="modalBody" role="dialog" aria-modal="true" aria-label="Day summary"></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ===== ds.js: data structures and algorithms (pure, no DOM) ===== */
+
+/* ---- Stack (LIFO): undo ledger, iterative DFS. push/pop/peek O(1) ---- */
+class Stack {
+  constructor() { this.a = []; }
+  push(x) { this.a.push(x); } pop() { return this.a.pop(); } peek() { return this.a[this.a.length - 1]; }
+  get size() { return this.a.length; } clear() { this.a.length = 0; }
+}
+
+/* ---- Deque on a circular buffer that doubles when full (dynamic array) ----
+   pushBack/pushFront/popBack/popFront O(1) amortised. With a max, the oldest item drops (sliding window). */
+class Deque {
+  constructor(max = Infinity) { this.max = max; this.buf = new Array(8); this.head = 0; this.len = 0; this.grows = 0; }
+  get size() { return this.len; } get capacity() { return this.buf.length; }
+  _grow() { const nb = new Array(this.buf.length * 2); for (let i = 0; i < this.len; i++) nb[i] = this.buf[(this.head + i) % this.buf.length]; this.buf = nb; this.head = 0; this.grows++; }
+  pushBack(x) { if (this.len >= this.max) this.popFront(); if (this.len === this.buf.length) this._grow(); this.buf[(this.head + this.len) % this.buf.length] = x; this.len++; }
+  pushFront(x) { if (this.len >= this.max) this.popBack(); if (this.len === this.buf.length) this._grow(); this.head = (this.head - 1 + this.buf.length) % this.buf.length; this.buf[this.head] = x; this.len++; }
+  popFront() { if (!this.len) return undefined; const x = this.buf[this.head]; this.buf[this.head] = undefined; this.head = (this.head + 1) % this.buf.length; this.len--; return x; }
+  popBack() { if (!this.len) return undefined; const i = (this.head + this.len - 1) % this.buf.length, x = this.buf[i]; this.buf[i] = undefined; this.len--; return x; }
+  peekFront() { return this.len ? this.buf[this.head] : undefined; }
+  peekBack() { return this.len ? this.buf[(this.head + this.len - 1) % this.buf.length] : undefined; }
+  at(i) { return this.buf[(this.head + i) % this.buf.length]; }
+  clear() { this.buf = new Array(8); this.head = 0; this.len = 0; }
+  toArray() { const r = []; for (let i = 0; i < this.len; i++) r.push(this.at(i)); return r; }
+}
+/* ---- Queue (FIFO) = Deque used at both ends in one direction ---- */
+class Queue extends Deque { enqueue(x) { this.pushBack(x); } dequeue() { return this.popFront(); } }
+
+/* ---- Dynamic array over a typed (static) Float64Array: capacity doubles, so push is O(1) amortised ---- */
+class DynArray {
+  constructor(cap = 4) { this.buf = new Float64Array(cap); this.length = 0; this.resizes = 0; this.copies = 0; }
+  get capacity() { return this.buf.length; } get bytes() { return this.buf.byteLength; }
+  push(x) { if (this.length === this.buf.length) { const nb = new Float64Array(this.buf.length * 2); nb.set(this.buf); this.copies += this.length; this.buf = nb; this.resizes++; } this.buf[this.length++] = x; }
+  get(i) { return this.buf[i]; }
+  clear() { this.length = 0; }
+  toArray() { return Array.from(this.buf.subarray(0, this.length)); }
+}
+
+/* ---- Hash table: separate chaining, FNV-1a hash, rehash (double) when load factor passes 0.75 ---- */
+class HashTable {
+  constructor(cap = 8) { this.b = new Array(cap).fill(null); this.n = 0; this.collisions = 0; this.rehashes = 0; this.probes = 0; }
+  static hash(k, m) { let h = 2166136261; const s = String(k); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % m; }
+  _find(k) { for (let e = this.b[HashTable.hash(k, this.b.length)]; e; e = e.next) { this.probes++; if (e.k === k) return e; } return null; }
+  _put(k, v) { const i = HashTable.hash(k, this.b.length); if (this.b[i]) this.collisions++; this.b[i] = { k, v, next: this.b[i] }; this.n++; }
+  has(k) { return !!this._find(k); }
+  get(k) { const e = this._find(k); return e ? e.v : undefined; }
+  set(k, v) { const e = this._find(k); if (e) { e.v = v; return; } if ((this.n + 1) / this.b.length > 0.75) this._rehash(); this._put(k, v); }
+  delete(k) { const i = HashTable.hash(k, this.b.length); let prev = null; for (let e = this.b[i]; e; prev = e, e = e.next) if (e.k === k) { if (prev) prev.next = e.next; else this.b[i] = e.next; this.n--; return true; } return false; }
+  _rehash() { const old = this.b; this.b = new Array(old.length * 2).fill(null); this.n = 0; this.collisions = 0; this.rehashes++; for (const h of old) for (let e = h; e; e = e.next) this._put(e.k, e.v); }
+  stats() { let longest = 0, used = 0; for (const h of this.b) { let c = 0; for (let e = h; e; e = e.next) c++; if (c) used++; if (c > longest) longest = c; } return { buckets: this.b.length, entries: this.n, load: this.n / this.b.length, collisions: this.collisions, rehashes: this.rehashes, longest, used, probes: this.probes }; }
+}
+class HashSet { constructor() { this.t = new HashTable(); } add(k) { this.t.set(k, 1); } has(k) { return this.t.has(k); } delete(k) { this.t.delete(k); } clear() { this.t = new HashTable(); } get size() { return this.t.n; } }
+
+/* ---- Binary min-heap (priority queue): push/pop O(log n) ---- */
+class MinHeap {
+  constructor() { this.a = []; } get size() { return this.a.length; }
+  push(p, v) { const a = this.a; a.push([p, v]); let i = a.length - 1; while (i > 0) { const q = (i - 1) >> 1; if (a[q][0] <= a[i][0]) break; [a[q], a[i]] = [a[i], a[q]]; i = q; } }
+  pop() { const a = this.a; if (!a.length) return null; const top = a[0], last = a.pop(); if (a.length) { a[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m; } } return top; }
+}
+
+/* ---- Binary search tree with subtree weight sums (order-statistic sampling). find/insert/delete O(h) ---- */
+class BSTNode { constructor(key, val, w) { this.key = key; this.val = val; this.w = w; this.sum = w; this.l = null; this.r = null; } }
+class BST {
+  constructor() { this.root = null; this.size = 0; }
+  _up(n) { n.sum = n.w + (n.l ? n.l.sum : 0) + (n.r ? n.r.sum : 0); }
+  _ins(n, k, v, w) { if (!n) { this.size++; return new BSTNode(k, v, w); } if (k < n.key) n.l = this._ins(n.l, k, v, w); else if (k > n.key) n.r = this._ins(n.r, k, v, w); else { n.val = v; n.w = w; } this._up(n); return n; }
+  insert(k, v, w) { this.root = this._ins(this.root, k, v, w); }
+  find(k) { let n = this.root; while (n && n.key !== k) n = k < n.key ? n.l : n.r; return n; }
+  _set(n, k, w) { if (!n) return; if (k < n.key) this._set(n.l, k, w); else if (k > n.key) this._set(n.r, k, w); else n.w = w; this._up(n); }
+  setWeight(k, w) { this._set(this.root, k, w); }   // node mutation: change a weight, repair sums on the path back up
+  _del(n, k) {
+    if (!n) return null;
+    if (k < n.key) n.l = this._del(n.l, k); else if (k > n.key) n.r = this._del(n.r, k);
+    else { if (!n.l) { this.size--; return n.r; } if (!n.r) { this.size--; return n.l; } let s = n.r; while (s.l) s = s.l; n.key = s.key; n.val = s.val; n.w = s.w; n.r = this._del(n.r, s.key); }
+    this._up(n); return n;
+  }
+  delete(k) { this.root = this._del(this.root, k); }
+  sample(r) { let n = this.root, last = null; while (n) { last = n; const ls = n.l ? n.l.sum : 0; if (r < ls) n = n.l; else if (r < ls + n.w) return n.val; else { r -= ls + n.w; n = n.r; } } return last ? last.val : null; }
+  inorder(visit) { const go = n => { if (!n) return; go(n.l); visit(n.key, n.val, n.w); go(n.r); }; go(this.root); }
+  range(lo, hi) { const out = []; const go = n => { if (!n) return; if (lo < n.key) go(n.l); if (n.key >= lo && n.key <= hi) out.push(n.key); if (hi > n.key) go(n.r); }; go(this.root); return out; }
+  height() { const h = n => n ? 1 + Math.max(h(n.l), h(n.r)) : 0; return h(this.root); }
+}
+
+/* ---- Skill tree: hierarchy with DFS pre-order (explicit Stack), BFS level order (Queue), post-order, memoised path cost ---- */
+class SkillTree {
+  constructor(nodes) {
+    this.byId = {}; this.kids = {}; this.parent = {}; this.roots = [];
+    for (const n of nodes) { this.byId[n.id] = n; const p = n.req[0] && n.req[0] !== '@m' ? n.req[0] : null; this.parent[n.id] = p; if (p) (this.kids[p] = this.kids[p] || []).push(n.id); else this.roots.push(n.id); }
+    this.memo = new HashTable(); this.calls = 0; this.hits = 0;
+  }
+  invalidate() { this.memo = new HashTable(); }
+  preorder(visit) { const st = new Stack(); for (let k = this.roots.length - 1; k >= 0; k--) st.push([this.roots[k], 0]); while (st.size) { const [id, d] = st.pop(); visit(id, d); const ch = this.kids[id] || []; for (let k = ch.length - 1; k >= 0; k--) st.push([ch[k], d + 1]); } }
+  levelOrder() { const q = new Queue(), out = []; this.roots.forEach(r => q.enqueue([r, 0])); while (q.size) { const [id, d] = q.dequeue(); out.push([id, d]); for (const c of this.kids[id] || []) q.enqueue([c, d + 1]); } return out; }
+  postorder(id, visit) { for (const c of this.kids[id] || []) this.postorder(c, visit); visit(id); }
+  subtree(id) { let n = 0, cost = 0; this.postorder(id, x => { n++; cost += this.byId[x].cost; }); return { n, cost }; }
+  costTo(id, owned) {   // memoised recursion: price of this node plus every unowned ancestor
+    this.calls++; if (owned(id)) return 0;
+    const k = 'c' + id, h = this.memo.get(k); if (h !== undefined) { this.hits++; return h; }
+    const p = this.parent[id], c = this.byId[id].cost + (p ? this.costTo(p, owned) : 0); this.memo.set(k, c); return c;
+  }
+}
+
+
+/* ---- Graphs: grid graph with BOTH an adjacency list (O(V+E) memory) and a matrix (O(V^2), O(1) edge test) ---- */
+function gridGraph(n) {
+  const V = n * n, adj = Array.from({ length: V }, () => []), mat = new Uint8Array(V * V); let E2 = 0;
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const u = j * n + i; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = i + di, y = j + dj; if (x >= 0 && y >= 0 && x < n && y < n) { const v = y * n + x; adj[u].push(v); mat[u * V + v] = 1; E2++; } } }
+  return { n, V, E: E2 / 2, adj, mat };
+}
+function bfsCount(adj, s, same, vis) {      // flood fill with a Queue, O(V+E); vis is a reused static Uint8Array
+  vis.fill(0); const q = new Queue(); q.enqueue(s); vis[s] = 1; let cnt = 0;
+  while (q.size) { const u = q.dequeue(); cnt++; for (const v of adj[u]) if (!vis[v] && same(v)) { vis[v] = 1; q.enqueue(v); } }
+  return cnt;
+}
+function bfsDist(adj, s) { const d = new Int32Array(adj.length).fill(-1), q = new Queue(); d[s] = 0; q.enqueue(s); while (q.size) { const u = q.dequeue(); for (const v of adj[u]) if (d[v] < 0) { d[v] = d[u] + 1; q.enqueue(v); } } return d; }
+function components(adj, key) {              // connected groups with equal key, iterative DFS with a Stack
+  const seen = new Uint8Array(adj.length), sizes = [];
+  for (let s = 0; s < adj.length; s++) {
+    if (seen[s] || key(s) < 0) continue; const st = new Stack(); st.push(s); seen[s] = 1; let c = 0;
+    while (st.size) { const u = st.pop(); c++; for (const v of adj[u]) if (!seen[v] && key(v) === key(s)) { seen[v] = 1; st.push(v); } }
+    sizes.push(c);
+  }
+  return sizes;
+}
+function dijkstra(adj, src, stopAt = -1) {   // adj[u] = [[v, weight]], O((V+E) log V) with MinHeap
+  const N = adj.length, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), pq = new MinHeap(); let pops = 0;
+  dist[src] = 0; pq.push(0, src);
+  while (pq.size) { const [d, u] = pq.pop(); pops++; if (d > dist[u]) continue; if (u === stopAt) break; for (const [v, w] of adj[u]) { const nd = d + w; if (nd < dist[v]) { dist[v] = nd; prev[v] = u; pq.push(nd, v); } } }
+  return { dist, prev, pops };
+}
+const pathTo = (prev, t) => { const p = []; for (let v = t; v !== -1; v = prev[v]) p.push(v); return p.reverse(); };
+
+/* ---- Sorting: five algorithms with comparison/write counters ---- */
+const nowMs = () => (typeof performance !== 'undefined' ? performance : Date).now();
+const SORTS = {
+  bubble: { name: 'Bubble', big: 'O(n²)', fn(a, lt, c) { for (let i = 0; i < a.length - 1; i++) { let sw = false; for (let j = 0; j < a.length - 1 - i; j++) { c.cmp++; if (lt(a[j + 1], a[j])) { const t = a[j]; a[j] = a[j + 1]; a[j + 1] = t; c.mv += 2; sw = true; } } if (!sw) break; } return a; } },
+  insertion: { name: 'Insertion', big: 'O(n²), O(n) if nearly sorted', fn(a, lt, c) { for (let i = 1; i < a.length; i++) { const x = a[i]; let j = i - 1; while (j >= 0) { c.cmp++; if (!lt(x, a[j])) break; a[j + 1] = a[j]; c.mv++; j--; } a[j + 1] = x; c.mv++; } return a; } },
+  selection: { name: 'Selection', big: 'O(n²)', fn(a, lt, c) { for (let i = 0; i < a.length - 1; i++) { let m = i; for (let j = i + 1; j < a.length; j++) { c.cmp++; if (lt(a[j], a[m])) m = j; } if (m !== i) { const t = a[i]; a[i] = a[m]; a[m] = t; c.mv += 2; } } return a; } },
+  quick: { name: 'Quick', big: 'O(n log n) avg, O(n²) worst', fn(a, lt, c) {
+    const go = (lo, hi) => { if (lo >= hi) return; const mid = (lo + hi) >> 1; [a[mid], a[hi]] = [a[hi], a[mid]]; c.mv += 2; const p = a[hi]; let i = lo;
+      for (let j = lo; j < hi; j++) { c.cmp++; if (lt(a[j], p)) { [a[i], a[j]] = [a[j], a[i]]; c.mv += 2; i++; } } [a[i], a[hi]] = [a[hi], a[i]]; c.mv += 2; go(lo, i - 1); go(i + 1, hi); };
+    go(0, a.length - 1); return a; } },
+  merge: { name: 'Merge', big: 'O(n log n), stable', fn(a, lt, c) {      // divide and conquer
+    if (a.length < 2) return a; const m = a.length >> 1, L = SORTS.merge.fn(a.slice(0, m), lt, c), R = SORTS.merge.fn(a.slice(m), lt, c), out = []; let i = 0, j = 0;
+    while (i < L.length && j < R.length) { c.cmp++; if (lt(R[j], L[i])) out.push(R[j++]); else out.push(L[i++]); c.mv++; }
+    while (i < L.length) { out.push(L[i++]); c.mv++; } while (j < R.length) { out.push(R[j++]); c.mv++; } return out; } },
+};
+function runSort(kind, arr, lt = (a, b) => a < b) { const c = { cmp: 0, mv: 0 }, t0 = nowMs(), out = SORTS[kind].fn(arr.slice(), lt, c); return { arr: out, cmp: c.cmp, mv: c.mv, ms: nowMs() - t0 }; }
+function sortBy(arr, key, desc = false) {    // small lists: insertion sort; larger: stable merge sort
+  const lt = desc ? (x, y) => key(x) > key(y) : (x, y) => key(x) < key(y);
+  return runSort(arr.length <= 12 ? 'insertion' : 'merge', arr, lt).arr;
+}
+
+/* ---- Searching ---- */
+function linearSearch(arr, x) { let cmp = 0; for (let i = 0; i < arr.length; i++) { cmp++; if (arr[i] === x) return { idx: i, cmp }; } return { idx: -1, cmp }; }
+function binarySearch(arr, x) { let lo = 0, hi = arr.length - 1, cmp = 0; while (lo <= hi) { const mid = (lo + hi) >> 1; cmp++; if (arr[mid] === x) return { idx: mid, cmp }; if (arr[mid] < x) lo = mid + 1; else hi = mid - 1; } return { idx: -1, cmp }; }
+function upperBound(arr, x) { let lo = 0, hi = arr.length, cmp = 0; while (lo < hi) { const mid = (lo + hi) >> 1; cmp++; if (arr[mid] <= x) lo = mid + 1; else hi = mid; } return { idx: lo, cmp }; }   // count of items <= x
+
+/* ---- Dynamic programming: 0/1 knapsack bottom-up table (O(n*W)) and top-down memoised recursion ---- */
+function knapsackDP(items, W) {
+  const n = items.length, dp = Array.from({ length: n + 1 }, () => new Int32Array(W + 1)); let cells = 0;
+  for (let i = 1; i <= n; i++) { const { w, v } = items[i - 1]; for (let c = 0; c <= W; c++) { cells++; let best = dp[i - 1][c]; if (c >= w && dp[i - 1][c - w] + v > best) best = dp[i - 1][c - w] + v; dp[i][c] = best; } }
+  const ids = []; let c = W; for (let i = n; i > 0; i--) if (dp[i][c] !== dp[i - 1][c]) { ids.push(items[i - 1].id); c -= items[i - 1].w; }
+  return { ids: ids.reverse(), score: dp[n][W], cells };
+}
+function knapsackMemo(items, W) {
+  const memo = new HashTable(); let calls = 0;
+  const f = (i, c) => { calls++; if (i === items.length) return 0; const k = i + '|' + c, h = memo.get(k); if (h !== undefined) return h; let best = f(i + 1, c); if (items[i].w <= c) best = Math.max(best, items[i].v + f(i + 1, c - items[i].w)); memo.set(k, best); return best; };
+  const score = f(0, W); return { score, states: memo.n, calls };
+}
+
+/* ---- Divide and conquer: best contiguous stretch (maximum subarray) ---- */
+function maxSubD(a, lo = 0, hi = a.length - 1) {
+  if (lo > hi) return { sum: 0, lo: -1, hi: -1 }; if (lo === hi) return { sum: a[lo], lo, hi };
+  const mid = (lo + hi) >> 1, L = maxSubD(a, lo, mid), R = maxSubD(a, mid + 1, hi);
+  let s = 0, bl = -Infinity, il = mid; for (let i = mid; i >= lo; i--) { s += a[i]; if (s > bl) { bl = s; il = i; } }
+  s = 0; let br = -Infinity, ir = mid + 1; for (let i = mid + 1; i <= hi; i++) { s += a[i]; if (s > br) { br = s; ir = i; } }
+  return [L, R, { sum: bl + br, lo: il, hi: ir }].reduce((b, c) => c.sum > b.sum ? c : b);
+}
+
+
+'use strict';
+/* ===== Keep Watering clone: core (no DOM) ===== */
+const SAVE_KEY = 'keepwatering.clone.v1';
+const DAY_LEN = 30;                                   // [Reported] ~30 s
+const THR = [5000, 7000, 25000, 200000, 1500000];     // first two reported, rest [Inferred]
+const SRC = ['ring', 'rain', 'irr', 'mole', 'tractor', 'drone', 'jet'];
+const SRCN = { ring: 'Watering ring', rain: 'Rain cloud', irr: 'Irrigator', mole: 'Mole', tractor: 'Tractor', drone: 'Drone', jet: 'Water jet', passive: 'Passive income' };
+const HARVN = { ring: 'Ring', tractor: 'Tractor', jet: 'Water jet', self: 'Self-pick' };
+const MN = { rain: 'Rain Cloud', irr: 'Irrigator', mole: 'Mole', tractor: 'Tractor', drone: 'Drone', jet: 'Water Jet' };
+
+const CROPS = [
+  { id: 'radish', name: 'Radish', water: 3, value: 3, w: 50, col: '#e0476b', unlock: null },
+  { id: 'tomato', name: 'Tomato', water: 4, value: 8, w: 40, col: '#e8402f', unlock: 'h_tomato' },
+  { id: 'potato', name: 'Potato', water: 6, value: 14, w: 34, col: '#b58a4a', unlock: 'h_potato' },
+  { id: 'eggplant', name: 'Eggplant', water: 9, value: 26, w: 28, col: '#6a3d9a', unlock: 'h_eggplant' },
+  { id: 'cabbage', name: 'Cabbage', water: 12, value: 45, w: 24, col: '#6cc070', unlock: 'h_cabbage' },
+  { id: 'corn', name: 'Corn', water: 16, value: 80, w: 18, col: '#f2c230', unlock: 'h_corn' },
+  { id: 'pumpkin', name: 'Pumpkin', water: 40, value: 140, w: 12, col: '#f08a24', unlock: 'h_pumpkin' },
+];
+const FARMS = {
+  small: { n: 5, cap: 2, name: 'Small Farm', unlock: null },
+  medium: { n: 7, cap: 3, name: 'Medium Farm', unlock: 'h_medium' },
+  big: { n: 9, cap: 4, name: 'Big Farm', unlock: 'h_big' },
+  storm: { n: 9, cap: 5, name: 'Storm Farm', unlock: 'h_storm' },
+};
+const HEIRS = [  // 14 nodes, 40 diamonds in total
+  { id: 'h_tomato', name: 'Tomato Seeds', cost: 1, v: 3, g: 'Crops', d: 'Tomatoes join the seed pool' },
+  { id: 'h_potato', name: 'Potato Seeds', cost: 1, v: 3, g: 'Crops', d: 'Potatoes join the seed pool' },
+  { id: 'h_eggplant', name: 'Eggplant Seeds', cost: 2, v: 4, g: 'Crops', d: 'Eggplants join the seed pool' },
+  { id: 'h_cabbage', name: 'Cabbage Seeds', cost: 2, v: 4, g: 'Crops', d: 'Cabbages join the seed pool' },
+  { id: 'h_corn', name: 'Corn Seeds', cost: 3, v: 5, g: 'Crops', d: 'Corn joins the seed pool' },
+  { id: 'h_pumpkin', name: 'Pumpkin Seeds', cost: 3, v: 3, g: 'Crops', d: 'Pumpkins join the seed pool (thirsty)' },
+  { id: 'h_medium', name: 'Medium Farm', cost: 2, v: 6, g: 'Farms', d: '7×7 plots, 3 ◆ cap per run' },
+  { id: 'h_big', name: 'Big Farm', cost: 4, v: 8, g: 'Farms', d: '9×9 plots, 4 ◆ cap per run' },
+  { id: 'h_storm', name: 'Storm Farm', cost: 6, v: 6, g: 'Farms', d: '9×9 plots, 5 ◆ cap, lightning' },
+  { id: 'h_passive', name: 'Passive Income', cost: 3, v: 5, g: 'Bonuses', d: 'A little money every day' },
+  { id: 'h_head', name: 'Head Start', cost: 3, v: 4, g: 'Bonuses', d: 'Every run starts with $250' },
+  { id: 'h_rain', name: 'Rain Barrel', cost: 4, v: 5, g: 'Bonuses', d: 'Light rain for the first 12 days of a run' },
+  { id: 'h_reach', name: 'Heirloom Hoe', cost: 3, v: 4, g: 'Bonuses', d: 'Ring radius +25%' },
+  { id: 'h_trowel', name: 'Golden Trowel', cost: 3, v: 6, g: 'Bonuses', d: 'Crops sell for 15% more' },
+];
+const HEIR = Object.fromEntries(HEIRS.map(h => [h.id, h]));
+
+/* ---------- economy (mirrored in Python) ---------- */
+const sig3 = x => Number(x.toPrecision(3));
+const Econ = {
+  costs() { const a = []; for (let i = 0; i < 79; i++) a.push(sig3(25 * Math.pow(1.19, i))); for (let k = 0; k < 21; k++) a.push(sig3(2.5e7 * Math.pow(1.14, k))); return a; },
+  diamonds(money, cap) { return Math.min(upperBound(THR, money).idx, cap); },   // binary search over sorted thresholds
+  settleDay(d) {
+    const lines = Object.entries(d.by).map(([src, v]) => ({ src, earn: v.earn, count: v.count }));
+    if (d.passive > 0) lines.push({ src: 'passive', earn: d.passive, count: 0 });
+    return { lines: sortBy(lines, l => l.earn, true), total: lines.reduce((s, l) => s + l.earn, 0) };
+  },
+};
+
+/* ---------- skill tree: 100 nodes ---------- */
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+const CH = {
+  H: { off: 0, items: [
+    ['Steady Hand', { ringRate: .85 }], ['Wide Ring', { ringR: .15 }], ['Row Swing', { swing: 1 }], ['Heavy Drops', { ringWater: .5 }],
+    ['Quick Wrist', { ringRate: .85 }], ['Reach Out', { harvestR: .3 }], ['Wider Ring', { ringR: .15 }], ['Cupped Hands', { ringWater: .75 }],
+    ['Blur Hands', { ringRate: .8 }], ['Grand Sweep', { ringR: .2 }], ['Deep Pour', { ringWater: 1 }], ['Long Reach', { harvestR: .4 }]] },
+  G: { off: .15, items: [
+    ['Fast Roots', { grow: .9 }], ['Loose Soil', { respawn: .85 }], ['Compost', { grow: .9 }], ['Seed Luck', { seed: 1.3 }], ['Early Bird', { respawn: .85 }],
+    ['Deep Roots', { grow: .9 }], ['Pumpkin Patch', { pumpW: 2 }], ['Fertile Soil', { grow: .88 }], ['Quick Sprout', { respawn: .8 }], ['Seed Luck II', { seed: 1.4 }],
+    ['Mulch', { grow: .88 }], ['Hybrid Vigor', { grow: .85 }], ['Seed Luck III', { seed: 1.5 }], ['Eternal Spring', { respawn: .75 }]] },
+  Y: { off: .05, items: [
+    ['Better Seed', { value: 1.25 }], ['Cash Boost', { value: 1.6 }], ['Bumper Basket', { value: 1.3 }], ['Cash Surge', { surge: .1 }], ['Farm Stand', { value: 1.35 }],
+    ['Crate Stack', { value: 1.3 }], ['Local Market', { value: 1.4 }], ['Surge II', { surge: .1 }], ['Bulk Orders', { value: 1.4 }], ['Co-op', { value: 1.35 }],
+    ['Export Deal', { value: 1.5 }], ['Surge III', { surge: .1 }], ['Premium Label', { value: 1.45 }], ['Wholesaler', { value: 1.5 }], ['Brand Name', { value: 1.5 }], ['Surge IV', { surge: .1 }]] },
+  F: { off: .4, items: ROMAN.map(r => ['Flow Force ' + r, { flow: 1.25 }]) },
+  R: { off: .2, items: [['Rain Cloud', { u: 'rain' }], ['Big Clouds', { rainR: .5 }], ['Endless Drizzle', { drizzle: 1 }], ['Cloudburst', { rainRate: .7 }]] },
+  I: { off: .35, items: [['Irrigator', { u: 'irr' }], ['Pressure Valve', { irrRate: .75 }], ['Twin Pipes', { twin: 1 }], ['High Pressure', { irrRate: .75 }]] },
+  M: { off: .45, items: [['Mole', { u: 'mole' }], ['Fast Digger', { moleRate: .7 }], ['Deep Tunnels', { moleR: .6 }]] },
+  T: { off: .5, items: [['Add Tractor', { u: 'tractor' }], ['Diesel Tune', { trSpeed: 1.4 }], ['Second Gear', { trGap: .7 }], ['Wide Plow', { trR: .5 }]] },
+  D: { off: .6, items: [['Add Drone', { u: 'drone' }], ['Rotor Upgrade', { drSpeed: 1.4 }], ['Big Battery', { drRate: .7 }], ['Spray Nozzle', { drR: .5 }]] },
+  J: { off: .7, items: [['Add Water Jet', { u: 'jet' }], ['Fast Sweep', { jtSpeed: 1.4 }], ['Long Beam', { jtW: .3 }], ['Pressure Pump', { jtWater: 1.4 }]] },
+  P: { off: .2, items: [['Gleaner', { pick: 6 }], ['Gleaner II', { pick: 3 }], ['Gleaner III', { pick: 1.2 }]] },
+};
+const LEG = ['Spade', 'Sprinkler', 'Barn', 'Scarecrow', 'Windmill', 'Well', 'Trellis', 'Lantern', 'Almanac', 'Silo', 'Gate', 'Bucket', 'Fence', 'Cart', 'Compost Heap', 'Beehive', 'Orchard', 'Weathervane', 'Kettle', 'Granary', 'Sundial'];
+const GRP = { H: 'Hands', G: 'Growth', Y: 'Yield', F: 'Force', R: 'Machines', I: 'Machines', M: 'Machines', T: 'Machines', D: 'Machines', J: 'Machines', P: 'Pickers', L: 'Legacy' };
+const pct = x => Math.round(x * 100) + '%';
+const DESC = {
+  ringRate: v => `Ring hits ${pct(1 - v)} faster`, ringR: v => `Ring radius +${v}`, swing: () => 'Ring stretches along the row',
+  ringWater: v => `+${v} water per ring hit`, harvestR: v => `Harvest reach +${v}`, grow: v => `Crops need ${pct(1 - v)} less water`,
+  respawn: v => `Crops respawn ${pct(1 - v)} sooner`, value: v => `Crops sell for ${pct(v - 1)} more`, surge: v => `+${pct(v)} chance a harvest pays triple`,
+  seed: () => 'Richer crops appear more often', pumpW: v => `Pumpkin seeds appear ${v}× as often`, pick: v => `Ripe crops pick themselves after ${v}s`,
+  flow: v => `All machines deliver ${pct(v - 1)} more water`, rainR: v => `Cloud reach +${v}`, rainRate: v => `Rain falls ${pct(1 - v)} faster`,
+  drizzle: () => 'Rain never stops', irrRate: v => `Irrigator ${pct(1 - v)} faster`, twin: () => 'Irrigator mirrors onto the far row',
+  moleRate: v => `Mole digs ${pct(1 - v)} faster`, moleR: v => `Mole splash +${v}`, trSpeed: v => `Tractor ${pct(v - 1)} faster`, trGap: v => `Tractor passes ${pct(1 - v)} more often`,
+  trR: v => `Tractor width +${v}`, drSpeed: v => `Drone ${pct(v - 1)} faster`, drRate: v => `Drone sprays ${pct(1 - v)} faster`, drR: v => `Drone spray +${v}`,
+  jtSpeed: v => `Jet sweeps ${pct(v - 1)} faster`, jtW: v => `Jet beam wider by ${v}`, jtWater: v => `Jet pressure +${pct(v - 1)}`,
+  u: v => `Adds the ${MN[v]}`,
+};
+const describe = eff => Object.entries(eff).map(([k, v]) => DESC[k](v)).join(', ');
+
+const COST = Econ.costs();
+const _items = [];
+for (const c in CH) {
+  const L = CH[c].items;
+  L.forEach((it, k) => _items.push({ c, k, key: (k + .5) / L.length + CH[c].off, name: it[0], eff: it[1], prev: k ? slug(L[k - 1][0]) : (c === 'F' ? '@m' : null) }));
+}
+_items.sort((a, b) => a.key - b.key || a.c.localeCompare(b.c));
+LEG.forEach((n, k) => _items.push({ c: 'L', k, name: 'Golden ' + n, eff: { value: 1.04, flow: 1.03 }, prev: k ? slug('Golden ' + LEG[k - 1]) : null }));
+const NODES = _items.map((it, idx) => ({ id: slug(it.name), name: it.name, c: it.c, grp: GRP[it.c], eff: it.eff, req: it.prev ? [it.prev] : [], idx, cost: COST[idx], desc: describe(it.eff) }));
+const NODE = Object.fromEntries(NODES.map(n => [n.id, n]));
+const TREE = new SkillTree(NODES);                              // hierarchy: DFS/BFS traversals, memoised path cost
+const MACH_IDS = NODES.filter(n => n.eff.u).map(n => n.id);
+const DEP = (() => { const idx = {}; NODES.forEach((n, i) => idx[n.id] = i); const pred = NODES.map(n => n.req.flatMap(r => r === '@m' ? MACH_IDS.map(m => idx[m]) : [idx[r]])); const succ = NODES.map(() => []); pred.forEach((ps, v) => ps.forEach(u => succ[u].push(v))); return { idx, pred, succ }; })();   // dependency graph as adjacency lists
+
+
+/* ---------- state ---------- */
+const ok = m => ({ ok: 1, msg: m }), fail = m => ({ ok: 0, msg: m });
+/* v3: extra hooks (all no-ops here; the UI layer fills them in). */
+const HOOK = { ach() {}, dayEnd() {}, dia() {}, sfx() {}, harvest() {}, water() {}, splash() {}, ripe() {}, mach() {}, dayStart() {} };
+const rnd = (a, b) => a + Math.random() * (b - a);
+let G = null, S = null, M = null;
+const OWN = new HashSet(), ACHS = new HashSet(), UNDO = new Stack(), HIST = new DynArray(), MEMO = new HashTable();
+const PERF = { box: 0, naive: 0 }, SEEDOPS = { ins: 0, del: 0, upd: 0 }, FGC = {};
+const farmGraph = n => FGC[n] || (FGC[n] = gridGraph(n));
+function syncSets() { OWN.clear(); G.run.nodes.forEach(id => OWN.add(id)); ACHS.clear(); G.meta.ach.forEach(id => ACHS.add(id)); TREE.invalidate(); }
+function rebuildHist() { HIST.clear(); (G.meta.hist || []).forEach(x => HIST.push(x)); }
+
+function fmt(n) {
+  if (n < 1000) return n < 10 ? n.toFixed(n % 1 ? 1 : 0) : String(Math.floor(n));
+  const u = ['K', 'M', 'B', 'T', 'Qa']; let i = -1;
+  while (n >= 1000 && i < 4) { n /= 1000; i++; }
+  return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n)) + u[i];
+}
+/* v3: ids of every one-time tip / "new" dot kept in meta.ui.seen. Veterans loading an old save get them all marked as seen. */
+const TIP_IDS = ['c_water', 'c_harvest', 'c_buy', 'c_machine', 'c_dia', 'c_prestige', 'c_storm', 't_prestige'];
+function newMeta() {
+  return { dia: 0, pres: 0, heir: [], ach: [], pend: 'small', used: ['small'], cap: [], lastBest: 0, skip: [], hist: [],
+    life: { harv: 0, resp: 0, auto: 0, diaEarn: 0, days: 0, water: 0, bestDay: 0, bought: 0, dry: 0, hands: 0, crops: [], mach: [], ever: [] },
+    set: { music: .3, sfx: .5, fps: 60, smooth: 1, speed: 1, auto: 0, greedy: 0, mute: 0 },
+    ui: { seen: {}, adv: null, all: 0 } };
+}
+function newRun(meta) {
+  const farm = FARMS[meta.pend] && (!FARMS[meta.pend].unlock || meta.heir.includes(FARMS[meta.pend].unlock)) ? meta.pend : 'small';
+  return { farm, day: 1, money: meta.heir.includes('h_head') ? 250 : 0, moneyRun: 0, nodes: [], harvRun: 0, dia: 0, bestDay: 0, tractorBought: 0 };
+}
+function freshG() { const meta = newMeta(); return { meta, run: newRun(meta) }; }
+function load() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const s = localStorage.getItem(SAVE_KEY); if (!s) return null;
+    const o = JSON.parse(s), f = freshG(), d = newMeta();
+    Object.assign(f.meta, o.meta);
+    f.meta.life = Object.assign(d.life, o.meta.life || {}); f.meta.set = Object.assign(d.set, o.meta.set || {});
+    /* v3: meta.ui merged the same way as life and set; an old save has no ui, so a veteran is never re-gated or re-coached */
+    const u0 = o.meta.ui || null;
+    f.meta.ui = Object.assign(d.ui, u0 || {}); f.meta.ui.seen = Object.assign({}, u0 && u0.seen ? u0.seen : {});
+    if (!u0 && (f.meta.life.days > 0 || f.meta.pres > 0)) TIP_IDS.forEach(k => { f.meta.ui.seen[k] = 1; });
+    Object.assign(f.run, o.run);
+    return f;
+  } catch (e) { return null; }
+}
+function save() { try { G.meta.hist = HIST.toArray().slice(-400); localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) {} }
+function wipe() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} G = freshG(); rebuildHist(); initSim(); }
+
+const MULK = new Set(['ringRate', 'grow', 'respawn', 'value', 'seed', 'pumpW', 'flow', 'rainRate', 'irrRate', 'moleRate', 'trSpeed', 'trGap', 'drSpeed', 'drRate', 'jtSpeed', 'jtWater']);
+function mods() {
+  const m = { ringR: .8, ringRate: .18, ringWater: 1, swing: 0, harvestR: .5, grow: 1, respawn: 1, value: 1, surge: 0, seed: 1, pumpW: 1, pick: 0, flow: 1,
+    rainR: 1.4, rainRate: .6, drizzle: 0, irrRate: 1.6, twin: 0, moleRate: 1.1, moleR: 1.1, trSpeed: 1, trGap: 1, trR: .7, drSpeed: 1, drRate: .3, drR: 1, jtSpeed: 1, jtWater: 1, jtW: .55, u: {} };
+  for (const id of G.run.nodes) {
+    const n = NODE[id]; if (!n) continue;
+    for (const k in n.eff) {
+      const v = n.eff[k];
+      if (k === 'u') m.u[v] = 1; else if (k === 'pick') m.pick = m.pick ? Math.min(m.pick, v) : v;
+      else if (MULK.has(k)) m[k] *= v; else m[k] += v;
+    }
+  }
+  const h = G.meta.heir;
+  if (h.includes('h_reach')) m.ringR *= 1.25;
+  if (h.includes('h_trowel')) m.value *= 1.15;
+  m.ringRate = Math.max(.03, m.ringRate);
+  return m;
+}
+const refreshMods = () => { M = mods(); if (S && S.seeds) syncSeeds(); };
+const reqOk = n => n.req.every(r => r === '@m' ? MACH_IDS.some(id => OWN.has(id)) : OWN.has(r));   // O(1) hash lookups
+
+function initSim() {
+  const n = FARMS[G.run.farm].n, fg = farmGraph(n);
+  S = { phase: 'idle', t: DAY_LEN, n, fg, plots: [], grid: [], vis: new Uint8Array(n * n), fx: new Deque(140), rate: new Deque(), clock: 0, seeds: new BST(),
+    day: null, mx: n / 2, my: n / 2, rx: n / 2, ry: n / 2, mouse: false, ringT: 0, paused: false, achT: 0, barrel: 0,
+    rain: { cx: n / 2, cy: n / 2, vx: .9, vy: .6, life: 0, t: 0, on: 0 }, irr: { t: 0, row: -1, flash: 0 }, mole: { t: 0, x: -9, y: -9, vis: 0, v: 0, path: [] },
+    tr: { x: -1, j: 0, wait: 1, acc: 0, q: new Queue(), queued: new HashSet() }, dr: { x: n / 2, y: n / 2, tx: n / 2, ty: n / 2, t: 0 }, jt: { a: 0, t: 0 },
+    storm: { t: 4, warn: 0, x: 0, y: 0, v: 0, flash: 0, rt: 0 } };
+  for (let j = 0; j < n; j++) {                         // 2D list of rows; flat index = j * n + i (row-major)
+    const row = [];
+    for (let i = 0; i < n; i++) { const p = { i, j, crop: -1, water: 0, req: 1, ripe: 0, ripeT: 0, resp: Math.random() * .8, src: 'ring' }; S.plots.push(p); row.push(p); }
+    S.grid.push(row);
+  }
+  syncSets(); UNDO.clear(); refreshMods();
+}
+/* Seed pool = weighted BST keyed by water need. Unlock = insert, skip = delete, upgrades = setWeight. */
+const SEED_ORDER = [3, 1, 5, 0, 2, 4, 6];              // median-first so the tree stays shallow
+const seedWeight = c => { const cr = CROPS[c]; let w = cr.w * Math.pow(M.seed, c / 3); if (cr.id === 'pumpkin') w *= M.pumpW; return w; };
+function syncSeeds(again) {
+  for (const c of SEED_ORDER) {
+    const cr = CROPS[c], want = (!cr.unlock || G.meta.heir.includes(cr.unlock)) && !G.meta.skip.includes(cr.id), w = seedWeight(c), nd = S.seeds.find(cr.water);
+    if (want && !nd) { S.seeds.insert(cr.water, c, w); SEEDOPS.ins++; }
+    else if (!want && nd) { S.seeds.delete(cr.water); SEEDOPS.del++; }
+    else if (want && Math.abs(nd.w - w) > 1e-9) { S.seeds.setWeight(cr.water, w); SEEDOPS.upd++; }
+  }
+  if (!S.seeds.root && !again) { G.meta.skip = []; syncSeeds(true); }
+}
+function spawn(p) {
+  const pick = S.seeds.sample(Math.random() * S.seeds.root.sum);
+  p.crop = pick; p.water = 0; p.ripe = 0; p.ripeT = 0; p.req = Math.max(.5, CROPS[pick].water * M.grow);
+}
+function startDay() {
+  if (!S || S.phase === 'day') return;
+  refreshMods(); S.phase = 'day'; S.t = DAY_LEN; UNDO.clear();
+  S.day = { by: {}, harv: {}, earn: 0, ringWet: 0, n: 0, patch: 0 };
+  for (const p of S.plots) {
+    if (p.crop < 0) spawn(p);
+    else if (!p.ripe) { p.req = Math.max(.5, CROPS[p.crop].water * M.grow); if (p.water >= p.req) markRipe(p); }
+  }
+  HOOK.dayStart();
+}
+/* Ripe plots queue their row for the tractor (FIFO). */
+function markRipe(p) { p.ripe = 1; p.ripeT = 0; const t = S.tr; if (M.u.tractor && !t.queued.has(p.j)) { t.queued.add(p.j); t.q.enqueue(p.j); } HOOK.ripe(p); }
+function addWater(p, amt, src) {
+  if (p.crop < 0 || p.ripe) return false;
+  p.water += amt; p.src = src; G.meta.life.water++;
+  if (src === 'ring') S.day.ringWet = 1; else G.meta.life.auto++;
+  if (p.water >= p.req) markRipe(p);
+  return true;
+}
+/* Visit only the grid cells inside a bounding box: O(r^2) per call instead of O(N) over every plot. */
+function forBox(gx, gy, rx, ry, fn) {
+  const n = S.n, g = S.grid, j0 = Math.max(0, Math.floor(gy - ry - .5)), j1 = Math.min(n - 1, Math.ceil(gy + ry - .5)), i0 = Math.max(0, Math.floor(gx - rx - .5)), i1 = Math.min(n - 1, Math.ceil(gx + rx - .5));
+  PERF.naive += n * n;
+  for (let j = j0; j <= j1; j++) { const row = g[j]; for (let i = i0; i <= i1; i++) { PERF.box++; fn(row[i]); } }
+}
+function waterAt(gx, gy, r, amt, src) {
+  const r2 = r * r;
+  forBox(gx, gy, r, r, p => { const dx = p.i + .5 - gx, dy = p.j + .5 - gy; if (dx * dx + dy * dy <= r2) addWater(p, amt, src); });
+  HOOK.splash(gx, gy, r, src);
+}
+const thirst = p => p.crop >= 0 && !p.ripe ? Math.max(0, p.req - p.water) : 0;
+/* BFS flood fill over the farm graph: size of the connected patch of ripe, same-type crops. */
+function clusterSize(p) { const c = p.crop, flat = S.plots; return bfsCount(S.fg.adj, p.j * S.n + p.i, v => flat[v].crop === c && flat[v].ripe, S.vis); }
+/* v3: the duplicate definition of updateDia() is gone; this is the only one. */
+function updateDia() {
+  const cap = FARMS[G.run.farm].cap, d = Econ.diamonds(G.run.moneyRun, cap);
+  if (d > G.run.dia) { G.run.dia = d; HOOK.dia(d); if (d >= cap && !G.meta.cap.includes(G.run.farm)) G.meta.cap.push(G.run.farm); }
+}
+function harvest(p, by) {
+  if (p.crop < 0 || !p.ripe) return;
+  const cr = CROPS[p.crop], R = G.run, d = S.day, L = G.meta.life;
+  const bonus = 1 + Math.min(.4, .04 * (clusterSize(p) - 1));     // patch bonus: +4% per connected neighbour, capped at +40%
+  let base = cr.value * M.value; if (M.surge && Math.random() < M.surge) base *= 3;
+  const v = base * bonus; d.patch += v - base;
+  R.money += v; R.moneyRun += v; d.earn += v; d.n++;
+  const b = d.by[p.src] || (d.by[p.src] = { earn: 0, count: 0 }); b.earn += v; b.count++;
+  d.harv[by] = (d.harv[by] || 0) + 1; R.harvRun++; L.harv++;
+  if (!L.crops.includes(cr.id)) L.crops.push(cr.id);
+  S.fx.pushBack({ x: p.i + .5, y: p.j + .5, txt: '+' + fmt(v), life: .9, max: .9, col: cr.col });
+  S.rate.pushBack([S.clock, v]);
+  p.crop = -1; p.ripe = 0; p.resp = Math.max(.3, 3 * M.respawn);
+  HOOK.harvest(p, v, by, cr); updateDia();
+}
+/* Money per second over the last 5 s: a sliding window on a Deque (push back, pop expired from the front). */
+function incomeRate() {
+  while (S.rate.size && S.rate.peekFront()[0] < S.clock - 5) S.rate.popFront();
+  let s = 0; for (let i = 0; i < S.rate.size; i++) s += S.rate.at(i)[1]; return s / 5;
+}
+function ringHit() {
+  const rr = M.ringR, rx = M.swing ? rr * 2.4 : rr, reach = rr + M.harvestR, hz = reach * reach;
+  let wet = 0, prog = 0;
+  forBox(S.rx, S.ry, Math.max(rx, reach), reach, p => {
+    const dx = p.i + .5 - S.rx, dy = p.j + .5 - S.ry;
+    if (p.ripe) { if (dx * dx + dy * dy <= hz) harvest(p, 'ring'); }
+    else if ((dx * dx) / (rx * rx) + (dy * dy) / (rr * rr) <= 1) { if (addWater(p, M.ringWater, 'ring')) { wet++; prog += Math.min(1, p.water / p.req); } }
+  });
+  if (wet) HOOK.water('ring', S.rx, S.ry, prog / wet, rx, rr);
+}
+/* Greedy choice: the spot whose spray radius covers the most missing water. */
+function bestSpot(r) {
+  let best = null, bs = 0;
+  for (const p of S.plots) { let s = 0; forBox(p.i + .5, p.j + .5, r, r, q => { const dx = q.i - p.i, dy = q.j - p.j; if (dx * dx + dy * dy <= r * r) s += thirst(q); }); if (s > bs) { bs = s; best = p; } }
+  return best ? [best.i + .5, best.j + .5] : [rnd(.3, S.n - .3), rnd(.3, S.n - .3)];
+}
+/* Mole: greedy target (thirstiest crop), Dijkstra tunnel through cheap-to-dig plots, water along the path. */
+function moleDig(F) {
+  const m = S.mole; let t = null, ts = 0;
+  for (const p of S.plots) { const s = thirst(p); if (s > ts) { ts = s; t = p; } }
+  if (!t) return;
+  const flat = S.plots, n = S.n, wgt = p => p.crop < 0 ? 3 : p.ripe ? 6 : 1 + 2 * (1 - Math.min(1, thirst(p) / p.req));
+  const adj = S.fg.adj.map(nb => nb.map(v => [v, wgt(flat[v])])), tv = t.j * n + t.i, r = dijkstra(adj, m.v, tv), path = pathTo(r.prev, tv);
+  for (const v of path) addWater(flat[v], 1 * F, 'mole');
+  m.path = path.map(v => [flat[v].i + .5, flat[v].j + .5]); m.v = tv; m.x = t.i + .5; m.y = t.j + .5; m.vis = .6;
+  waterAt(m.x, m.y, M.moleR, 1.8 * F, 'mole');
+  HOOK.mach('mole', m.x, m.y);
+}
+function tractorNextRow() { const t = S.tr; const j = t.q.dequeue(); if (j !== undefined) { t.queued.delete(j); return j; } return (t.j + 1) % S.n; }
+function machines(h) {
+  const u = M.u, F = M.flow, n = S.n;
+  if (u.rain) { const r = S.rain; r.life += h; r.on = (M.drizzle || (r.life % 18) < 9) ? 1 : 0; r.cx += r.vx * h; r.cy += r.vy * h; if (r.cx < 0 || r.cx > n) r.vx *= -1; if (r.cy < 0 || r.cy > n) r.vy *= -1;
+    if (r.on) { r.t += h; if (r.t >= M.rainRate) { r.t = 0; waterAt(r.cx, r.cy, M.rainR, 1.3 * F, 'rain'); } } }
+  if (u.irr) { const s = S.irr; s.t += h; if (s.flash > 0) s.flash -= h;
+    if (s.t >= M.irrRate) { s.t = 0; s.row = (s.row + 1) % n; s.flash = .5; HOOK.mach('irr', s.row); for (const p of S.grid[s.row]) addWater(p, 1.8 * F, 'irr'); if (M.twin) for (const p of S.grid[n - 1 - s.row]) addWater(p, 1.8 * F, 'irr'); } }
+  if (u.mole) { const m = S.mole; if (m.vis > 0) m.vis -= h; m.t += h; if (m.t >= M.moleRate) { m.t = 0; moleDig(F); } }
+  if (u.tractor) { const t = S.tr;
+    if (t.wait > 0) t.wait -= h;
+    else { t.x += 3 * M.trSpeed * h; t.acc += h;
+      if (t.acc >= .1) { t.acc = 0; const gy = t.j + .5, r2 = M.trR * M.trR;
+        forBox(t.x, gy, M.trR, M.trR, p => { const dx = p.i + .5 - t.x, dy = p.j + .5 - gy; if (dx * dx + dy * dy <= r2) { if (p.ripe) harvest(p, 'tractor'); else addWater(p, 3 * F, 'tractor'); } }); }
+      if (t.x > n + .8) { t.wait = 6 * M.trGap; t.x = -.8; t.j = tractorNextRow(); } } }
+  if (u.drone) { const d = S.dr, dx = d.tx - d.x, dy = d.ty - d.y, L = Math.hypot(dx, dy);
+    if (L < .2) { [d.tx, d.ty] = bestSpot(M.drR); } else { const s = Math.min(3 * M.drSpeed * h, L); d.x += dx / L * s; d.y += dy / L * s; }
+    d.t += h; if (d.t >= M.drRate) { d.t = 0; waterAt(d.x, d.y, M.drR, 2.2 * F, 'drone'); } }
+  if (u.jet) { const j = S.jt; j.a += 1.0 * M.jtSpeed * h; j.t += h;
+    if (j.t >= .1) { j.t = 0; const c = n / 2, ca = Math.cos(j.a), sa = Math.sin(j.a), len = n * .75;
+      for (const p of S.plots) { const dx = p.i + .5 - c, dy = p.j + .5 - c, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+        if (Math.abs(along) <= len && perp <= M.jtW) { if (p.ripe) harvest(p, 'jet'); else addWater(p, 2.6 * F * M.jtWater, 'jet'); } } } }
+}
+function weather(h) {
+  const st = S.storm;
+  if (G.run.farm === 'storm') {
+    st.rt += h; if (st.rt >= .7) { st.rt = 0; waterAt(rnd(0, S.n), rnd(0, S.n), 1.3, .9, 'rain'); }
+    if (st.flash > 0) st.flash -= h;
+    if (st.warn > 0) {
+      st.warn -= h;
+      if (st.warn <= 0) {   // lightning clears the struck plot and every plot joined to it by an edge (adjacency-matrix test)
+        st.flash = .25; st.t = rnd(5, 8); HOOK.sfx('zap'); const V = S.fg.V, mat = S.fg.mat, tv = st.v;
+        for (let v = 0; v < V; v++) if (v === tv || mat[tv * V + v]) { const p = S.plots[v]; if (p.crop >= 0) { p.crop = -1; p.ripe = 0; p.resp = 1.5; } }
+      }
+    } else { st.t -= h; if (st.t <= 0) { st.warn = 1.3; const p = S.plots[(Math.random() * S.plots.length) | 0]; st.v = p.j * S.n + p.i; st.x = p.i + .5; st.y = p.j + .5; HOOK.sfx('warn'); } }
+  }
+  if (G.meta.heir.includes('h_rain') && G.run.day <= 12) { S.barrel += h; if (S.barrel >= 1) { S.barrel = 0; for (const p of S.plots) addWater(p, .6, 'rain'); } }
+}
+function sim(h) {
+  S.t -= h; S.clock += h;
+  const k = G.meta.set.smooth ? 1 - Math.exp(-h * 18) : 1; S.rx += (S.mx - S.rx) * k; S.ry += (S.my - S.ry) * k;
+  S.ringT += h; while (S.ringT >= M.ringRate) { S.ringT -= M.ringRate; if (S.mouse) ringHit(); }
+  machines(h); weather(h);
+  for (const p of S.plots) {
+    if (p.crop >= 0) { if (p.ripe) { p.ripeT += h; if (M.pick && p.ripeT >= M.pick) harvest(p, 'self'); } }
+    else { p.resp -= h; if (p.resp <= 0) { spawn(p); G.meta.life.resp++; } }
+  }
+  for (let i = 0; i < S.fx.size; i++) { const f = S.fx.at(i); f.life -= h; f.y -= .6 * h; }
+  while (S.fx.size && S.fx.peekFront().life <= 0) S.fx.popFront();
+  S.achT += h; if (S.achT > 1) { S.achT = 0; checkAch(); }
+  if (S.t <= 0) endDay();
+}
+function tick(dt) {
+  if (!S || S.phase !== 'day') return;
+  let left = dt * (G.meta.set.speed || 1);
+  while (left > 0 && S.phase === 'day') { const h = Math.min(left, .05); sim(h); left -= h; }
+}
+function endDay() {
+  S.phase = 'results'; const d = S.day; let passive = 0;
+  if (G.meta.heir.includes('h_passive')) { passive = Math.max(20, G.meta.lastBest * .02); G.run.money += passive; G.run.moneyRun += passive; d.earn += passive; }
+  const L = G.meta.life, prevBest = L.bestDay; L.days++;
+  if (d.earn > L.bestDay) L.bestDay = d.earn; if (d.earn > G.run.bestDay) G.run.bestDay = d.earn;
+  if (d.n > 0 && !d.ringWet) L.dry = 1;
+  updateDia(); HIST.push(d.earn);
+  const res = Econ.settleDay({ by: d.by, passive }); res.harv = d.harv; res.earn = d.earn; res.day = G.run.day; res.n = d.n; res.patch = d.patch; res.prevBest = prevBest;
+  G.run.day++;
+  res.auto = G.meta.set.greedy ? autoBuy().map(id => NODE[id].name) : [];
+  checkAch(); save(); HOOK.dayEnd(res);
+}
+
+function nextTarget() {
+  let best = null;
+  for (const n of NODES) if (!OWN.has(n.id) && reqOk(n) && (!best || n.cost < best.cost)) best = n;
+  return best;
+}
+function buyNode(id) {
+  const n = NODE[id], R = G.run;
+  if (!n) return fail('Unknown upgrade');
+  if (S.phase === 'day') return fail('Buy upgrades between days');
+  if (OWN.has(id)) return fail('Already owned');
+  if (!reqOk(n)) return fail('Locked: buy the previous upgrade first');
+  if (R.money < n.cost) return fail('Not enough money');
+  R.money -= n.cost; R.nodes.push(id); OWN.add(id); TREE.invalidate(); UNDO.push({ id, cost: n.cost });
+  if (id === 'add_tractor') R.tractorBought = 1;
+  const L = G.meta.life; L.bought = 1;
+  if (!L.ever.includes(id)) L.ever.push(id);
+  if (n.eff.u && !L.mach.includes(n.eff.u)) L.mach.push(n.eff.u);
+  refreshMods(); checkAch(); save(); HOOK.sfx('buy', n); return ok(n.name);
+}
+/* Undo = pop the purchase stack (LIFO), so a prerequisite is never removed before the upgrades built on it. */
+function undoBuy() {
+  if (S.phase === 'day') return fail('Undo works between days');
+  const u = UNDO.pop(); if (!u) return fail('Nothing to undo');
+  const R = G.run; R.nodes.splice(R.nodes.lastIndexOf(u.id), 1); OWN.delete(u.id); R.money += u.cost; TREE.invalidate(); refreshMods(); save(); return ok(NODE[u.id].name);
+}
+/* Greedy auto-buy: a min-heap keyed by price always yields the cheapest open upgrade; newly unlocked ones join the heap. */
+function autoBuy() {
+  const heap = new MinHeap(), queued = new HashSet(), bought = [];
+  const offer = n => { if (!OWN.has(n.id) && !queued.has(n.id) && reqOk(n)) { queued.add(n.id); heap.push(n.cost, n.id); } };
+  NODES.forEach(offer);
+  while (heap.size) {
+    const [c, id] = heap.pop(); if (G.run.money < c) break;
+    if (!buyNode(id).ok) break; bought.push(id);
+    for (const k of TREE.kids[id] || []) offer(NODE[k]); TREE.roots.forEach(r => offer(NODE[r]));
+  }
+  return bought;
+}
+/* Dynamic programming: which affordable upgrades give the most power for the money? 0/1 knapsack, costs scaled to <= 400 units. */
+const POWER = { value: v => (v - 1) * 10, flow: v => (v - 1) * 8, grow: v => (1 - v) * 12, respawn: v => (1 - v) * 8, ringRate: v => (1 - v) * 8, ringR: v => v * 4, ringWater: v => v * 3, swing: () => 5, harvestR: v => v * 3, seed: v => (v - 1) * 5, pumpW: () => 2, pick: () => 6, surge: v => v * 25, u: () => 10, drizzle: () => 6, twin: () => 6 };
+const power = n => Math.max(1, Math.round(Object.entries(n.eff).reduce((s, [k, v]) => s + (POWER[k] ? POWER[k](v) : 4), 0) * 10));
+function upgradeItems() {
+  const money = G.run.money, unit = Math.max(1, Math.ceil(money / 400)), avail = NODES.filter(n => !OWN.has(n.id) && reqOk(n));
+  return { avail, unit, cap: Math.floor(money / unit), items: avail.map(n => ({ id: n.id, w: Math.ceil(n.cost / unit), v: power(n) })) };
+}
+function bestUpgradeBundle() {
+  const u = upgradeItems(), r = knapsackDP(u.items, u.cap), nodes = sortBy(r.ids.map(id => NODE[id]), n => n.cost);
+  return { nodes, cost: nodes.reduce((s, n) => s + n.cost, 0), score: r.score, cells: r.cells, req: { items: u.avail.map(n => ({ id: n.id, cost: n.cost, v: power(n) })), money: G.run.money } };
+}
+function heirItems() { return HEIRS.filter(h => !G.meta.heir.includes(h.id)).map(h => ({ id: h.id, w: h.cost, v: h.v })); }
+function bestHeirBundle() { const items = heirItems(), r = knapsackDP(items, G.meta.dia); return { ids: r.ids, score: r.score, cost: r.ids.reduce((s, id) => s + HEIR[id].cost, 0), cells: r.cells, req: { items, cap: G.meta.dia } }; }
+/* Dijkstra on the dependency graph: cheapest set of purchases that unlocks a target (owned nodes cost 0; "any machine" gives alternative routes). */
+function routeTo(id) {
+  const N = NODES.length, t = DEP.idx[id], w = v => OWN.has(NODES[v].id) ? 0 : NODES[v].cost;
+  const adj = NODES.map((_, u) => DEP.succ[u].map(v => [v, w(v)]));
+  adj.push(NODES.map((_, v) => v).filter(v => DEP.pred[v].length === 0 || OWN.has(NODES[v].id)).map(v => [v, w(v)]));
+  const r = dijkstra(adj, N, t);
+  return { id, ids: pathTo(r.prev, t).filter(v => v !== N && !OWN.has(NODES[v].id)).map(v => NODES[v].id), cost: r.dist[t], pops: r.pops, req: { adj, src: N, target: t } };
+}
+function buyRoute(ids) { let n = 0; for (const id of ids) { if (!buyNode(id).ok) break; n++; } return n; }
+function buyHeir(id) {
+  const h = HEIR[id], m = G.meta;
+  if (!h) return fail('Unknown'); if (m.heir.includes(id)) return fail('Already owned');
+  if (m.dia < h.cost) return fail('Not enough diamonds');
+  m.dia -= h.cost; m.heir.push(id); refreshMods(); checkAch(); save(); HOOK.sfx('buy', h); return ok(h.name);
+}
+function toggleSkip(id) {
+  const m = G.meta, i = m.skip.indexOf(id), active = CROPS.filter(c => (!c.unlock || m.heir.includes(c.unlock)) && !m.skip.includes(c.id));
+  if (i >= 0) m.skip.splice(i, 1); else { if (active.length <= 1) return fail('Keep at least one seed type'); m.skip.push(id); }
+  refreshMods(); save(); return ok();
+}
+function farmOwned(f) { const u = FARMS[f].unlock; return !u || G.meta.heir.includes(u); }
+function setPend(f) { if (!FARMS[f] || !farmOwned(f)) return fail('Farm not owned'); G.meta.pend = f; save(); return ok(); }
+function prestige() {
+  if (S.phase === 'day') return fail('Finish the day first');
+  if (G.run.dia < 1) return fail('Earn a diamond first');
+  const m = G.meta;
+  m.dia += G.run.dia; m.life.diaEarn += G.run.dia; m.pres++;
+  if (G.run.farm === 'storm' && G.run.dia >= 5 && !G.run.tractorBought) m.life.hands = 1;
+  m.lastBest = Math.max(G.run.bestDay, m.lastBest * .5);
+  const gained = G.run.dia; G.run = newRun(m);
+  if (!m.used.includes(G.run.farm)) m.used.push(G.run.farm);
+  initSim(); checkAch(); save(); HOOK.sfx('prestige'); return ok(gained);
+}
+
+/* ---------- 50 achievements ---------- */
+const A = (id, name, desc, fn, hidden) => ({ id, name, desc, fn, hidden });
+const nF = g => g.run.nodes.filter(id => NODE[id].c === 'F').length;
+const ACH = [
+  A('first_drop', 'First Drop', 'Water any crop for the first time', g => g.meta.life.water > 0),
+  A('fruit', 'Fruit of Labor', 'Grow a first crop to harvest', g => g.meta.life.harv > 0),
+  A('sundown', 'Sundown', 'Finish a first day', g => g.meta.life.days > 0),
+  A('room', 'Room to Grow', 'Buy a first skill-tree node', g => g.meta.life.bought > 0),
+  A('branch10', 'Branching Out', 'Own 10 tree nodes in one run', g => g.run.nodes.length >= 10),
+  A('half', 'Half a Tree', 'Own 50 tree nodes in one run', g => g.run.nodes.length >= 50),
+  A('every', 'Every Branch', 'Own all 100 main nodes in one run', g => g.run.nodes.length >= 100),
+  A('green', 'Green Thumb', 'Harvest 100 crops, lifetime', g => g.meta.life.harv >= 100),
+  A('bumper', 'Bumper Crop', 'Harvest 1,000 crops in one run', g => g.run.harvRun >= 1000),
+  A('mountain', 'Mountain Harvest', 'Harvest 10,000 crops in one run', g => g.run.harvRun >= 10000),
+  A('twohundred', 'Two Hundred Thousand', 'Harvest 200,000 crops, lifetime', g => g.meta.life.harv >= 200000),
+  A('second', 'Second Sprout', 'Have 5,000 crops respawn after harvest', g => g.meta.life.resp >= 5000),
+  A('fifty', 'Fifty Days of Rain', 'Reach day 50 in one run', g => g.run.day >= 50),
+  A('long', 'Long Season', 'Reach day 100 in one run', g => g.run.day >= 100),
+  A('seed_money', 'Seed Money', 'Earn $10,000 in one run', g => g.run.moneyRun >= 1e4),
+  A('cash_crop', 'Cash Crop', 'Earn $100,000 in one run', g => g.run.moneyRun >= 1e5),
+  A('millionaire', 'Millionaire Farmer', 'Earn $1,000,000 in one run', g => g.run.moneyRun >= 1e6),
+  A('agro', 'Agro-Industrial', 'Earn $5,000,000 in one run', g => g.run.moneyRun >= 5e6),
+  A('good_day', 'Good Day', 'Earn $10,000 in a single day', g => g.meta.life.bestDay >= 1e4),
+  A('golden_day', 'Golden Day', 'Earn $50,000 in a single day', g => g.meta.life.bestDay >= 5e4),
+  A('red', 'Red Harvest', 'Harvest a first tomato', g => g.meta.life.crops.includes('tomato')),
+  A('head', 'Head of the Table', 'Harvest a first cabbage', g => g.meta.life.crops.includes('cabbage')),
+  A('gourd', 'Gourd Times', 'Harvest a first pumpkin', g => g.meta.life.crops.includes('pumpkin')),
+  A('ground', 'Ground Crew', 'Unlock a first mole', g => g.meta.life.mach.includes('mole')),
+  A('rainmaker', 'Rainmaker', 'Unlock a first rain cloud', g => g.meta.life.mach.includes('rain')),
+  A('plumbed', 'Plumbed In', 'Unlock a first irrigator', g => g.meta.life.mach.includes('irr')),
+  A('diesel', 'Diesel Fingers', 'Unlock a first tractor', g => g.meta.life.mach.includes('tractor')),
+  A('never', 'It Never Stops', 'Buy Endless Drizzle (infinite rain)', g => g.meta.life.ever.includes('endless_drizzle')),
+  A('both', 'Both Ways', 'Buy Twin Pipes (irrigator mirror)', g => g.meta.life.ever.includes('twin_pipes')),
+  A('hands_free', 'Hands Free', 'Let automation deliver 10,000 waterings', g => g.meta.life.auto >= 1e4),
+  A('firehose', 'Firehose', 'Own all 11 Flow Force nodes in one run', g => nF(g) >= 11),
+  A('full_crew', 'Full Crew', 'Have rain, tractor, irrigator, mole, drone and water jet all active in one run', g => Object.keys(MN).every(k => g.run.nodes.some(id => NODE[id].eff.u === k))),
+  A('diamond1', 'Something to Keep', 'Earn a first diamond', g => g.run.dia >= 1 || g.meta.life.diaEarn > 0),
+  A('season1', 'End of Season', 'Prestige for the first time', g => g.meta.pres >= 1),
+  A('season5', 'Five Seasons', 'Prestige 5 times', g => g.meta.pres >= 5),
+  A('season10', 'Ten Seasons', 'Prestige 10 times', g => g.meta.pres >= 10),
+  A('heir5', 'Five Heirlooms', 'Own 5 prestige nodes', g => g.meta.heir.length >= 5),
+  A('medium', 'Room to Grow, Literally', 'Move to the Medium Farm', g => g.meta.used.includes('medium')),
+  A('big', 'Room to Sprawl', 'Move to the Big Farm', g => g.meta.used.includes('big')),
+  A('storm', 'Weather Partner', 'Move to the Storm Farm', g => g.meta.used.includes('storm')),
+  A('cap_small', 'Small Farm, Maxed', 'Earn the full 2 ◆ cap in one Small Farm run', g => g.meta.cap.includes('small')),
+  A('cap_medium', 'Medium Farm, Maxed', 'Earn the full 3 ◆ cap in one Medium Farm run', g => g.meta.cap.includes('medium')),
+  A('cap_big', 'Big Farm, Maxed', 'Earn the full 4 ◆ cap in one Big Farm run', g => g.meta.cap.includes('big')),
+  A('cap_storm', 'Storm, Maxed', 'Earn the full 5 ◆ cap in one Storm Farm run', g => g.meta.cap.includes('storm')),
+  A('diamond20', 'Diamond Standard', 'Earn 20 diamonds, lifetime', g => g.meta.life.diaEarn >= 20),
+  A('inherit', 'The Whole Inheritance', 'Own all 14 prestige nodes (40 ◆)', g => g.meta.heir.length >= 14),
+  A('vault', 'Seed Vault', 'Own all 6 crop-unlock prestige nodes', g => HEIRS.filter(h => h.g === 'Crops').every(h => g.meta.heir.includes(h.id))),
+  A('four', 'Four Seasons', 'Hit the per-run diamond cap on all four farms', g => ['small', 'medium', 'big', 'storm'].every(f => g.meta.cap.includes(f))),
+  A('dry', 'Dry Season', 'Finish a day in which crops were harvested but your own watering ring never watered one', g => g.meta.life.dry > 0),
+  A('hands', 'Your Own Two Hands', 'Hit the Storm Farm\'s 5 ◆ cap in a run in which you never bought Add Tractor', g => g.meta.life.hands > 0, true),
+];
+function checkAch() {
+  for (const a of ACH) if (!ACHS.has(a.id) && a.fn(G)) { G.meta.ach.push(a.id); ACHS.add(a.id); HOOK.ach(a); }
+}
+function snapshot() {
+  return { day: G.run.day, money: G.run.money, money_run: G.run.moneyRun, diamonds: G.meta.dia, prestiges: G.meta.pres, nodes: G.run.nodes.length,
+    farm: G.run.farm, harvests: G.meta.life.harv, achievements: G.meta.ach.length,
+    heirloom_items: heirItems(), nodes_owned: G.run.nodes.slice() };
+}
+G = load() || freshG();
+rebuildHist();
+initSim();
+checkAch();
+
+
+/* Python source: unchanged from v2 (kept as a string for Pyodide) */
+const PY_SRC = "import json, math, heapq\nfrom abc import ABC, abstractmethod\n\nTHR = [5000, 7000, 25000, 200000, 1500000]\n\n\ndef sig3(x):\n    return float('%.3g' % x)\n\n\ndef build_costs():\n    regular = [sig3(25 * 1.19 ** i) for i in range(79)]\n    final_block = [sig3(2.5e7 * 1.14 ** k) for k in range(21)]\n    return regular + final_block\n\n\ndef upper_bound(arr, x):\n    \"\"\"Binary search: how many items are <= x. O(log n).\"\"\"\n    lo, hi = 0, len(arr)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if arr[mid] <= x:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo\n\n\ndef diamonds_for(money, cap):\n    return min(cap, upper_bound(THR, money))\n\n\ndef settle_day(raw):\n    d = json.loads(raw)\n    lines = [{'src': s, 'earn': v['earn'], 'count': v['count']} for s, v in d['by'].items()]\n    if d.get('passive', 0) > 0:\n        lines.append({'src': 'passive', 'earn': d['passive'], 'count': 0})\n    lines.sort(key=lambda l: -l['earn'])          # stable, like the JS merge/insertion sort\n    return json.dumps({'lines': lines, 'total': sum(l['earn'] for l in lines)})\n\n\nclass Stack:\n    \"\"\"LIFO stack. push, pop and peek are O(1).\"\"\"\n    def __init__(self):\n        self._a = []\n\n    def push(self, x):\n        self._a.append(x)\n\n    def pop(self):\n        return self._a.pop()\n\n    def peek(self):\n        return self._a[-1]\n\n    def __len__(self):\n        return len(self._a)\n\n\nclass Planner(ABC):\n    \"\"\"Abstract base: subclasses implement solve() and declare their Big O.\"\"\"\n    big_o = ''\n\n    def __init__(self):\n        self.ops = 0\n\n    @abstractmethod\n    def solve(self, data):\n        ...\n\n    def report(self, data):\n        out = self.solve(data)\n        out.update(ops=self.ops, big_o=self.big_o, planner=type(self).__name__)\n        return out\n\n\nclass Knapsack(Planner):\n    \"\"\"0/1 knapsack by dynamic programming. items: [{id, w, v}], cap: int.\"\"\"\n    big_o = 'O(n*W) time, O(n*W) space'\n\n    def prepare(self, d):\n        return d['items'], int(d['cap'])\n\n    def solve(self, d):\n        items, W = self.prepare(d)\n        n = len(items)\n        dp = [[0] * (W + 1) for _ in range(n + 1)]\n        for i in range(1, n + 1):\n            w, v = items[i - 1]['w'], items[i - 1]['v']\n            for c in range(W + 1):\n                self.ops += 1\n                best = dp[i - 1][c]\n                if c >= w and dp[i - 1][c - w] + v > best:\n                    best = dp[i - 1][c - w] + v\n                dp[i][c] = best\n        ids, c = [], W\n        for i in range(n, 0, -1):\n            if dp[i][c] != dp[i - 1][c]:\n                ids.append(items[i - 1]['id'])\n                c -= items[i - 1]['w']\n        return {'ids': ids[::-1], 'score': dp[n][W]}\n\n\nclass UpgradeKnapsack(Knapsack):\n    \"\"\"Same DP; prices are scaled down to at most 400 units first.\"\"\"\n    def prepare(self, d):\n        money = d['money']\n        unit = max(1, math.ceil(money / 400))\n        items = [{'id': i['id'], 'w': math.ceil(i['cost'] / unit), 'v': i['v']} for i in d['items']]\n        return items, int(math.floor(money / unit))\n\n\nclass RoutePlanner(Planner):\n    \"\"\"Dijkstra with a binary heap. adj[u] = [[v, weight], ...].\"\"\"\n    big_o = 'O((V+E) log V)'\n\n    def solve(self, d):\n        adj, src, t = d['adj'], d['src'], d['target']\n        dist = [float('inf')] * len(adj)\n        prev = [-1] * len(adj)\n        dist[src] = 0\n        pq = [(0, src)]\n        while pq:\n            du, u = heapq.heappop(pq)\n            self.ops += 1\n            if du > dist[u]:\n                continue\n            if u == t:\n                break\n            for v, w in adj[u]:\n                nd = du + w\n                if nd < dist[v]:\n                    dist[v] = nd\n                    prev[v] = u\n                    heapq.heappush(pq, (nd, v))\n        path, v = [], t\n        while v != -1:\n            path.append(v)\n            v = prev[v]\n        return {'path': path[::-1], 'dist': dist[t]}\n\n\nclass TreeAnalyzer(Planner):\n    \"\"\"Iterative depth-first pre-order using an explicit Stack.\"\"\"\n    big_o = 'O(V)'\n\n    def solve(self, d):\n        kids, st, order, depth = d['kids'], Stack(), [], 0\n        for r in reversed(d['roots']):\n            st.push((r, 0))\n        while len(st):\n            nid, dp = st.pop()\n            self.ops += 1\n            order.append(nid)\n            depth = max(depth, dp)\n            for c in reversed(kids.get(nid, [])):\n                st.push((c, dp + 1))\n        return {'order': order, 'depth': depth}\n\n\nPLANNERS = {'heirloom': Knapsack, 'upgrade': UpgradeKnapsack, 'route': RoutePlanner, 'tree': TreeAnalyzer}\n\n\ndef run_planner(kind, raw):\n    return json.dumps(PLANNERS[kind]().report(json.loads(raw)))\n";
+
+/* ===== v3 audio: Web Audio API only, no files =====
+   One AudioContext (made on the first user gesture). Gameplay SFX and music run on separate buses into a master
+   gain, then a DynamicsCompressor. One-shot voices are capped at ~8 and every sound type is rate limited. */
+const AUD = (() => {
+  let ctx = null, master, comp, sfxBus, musBus, arpBus, white, brown, voices = 0, duck = 1, rateSm = 0, lastTick = -1, lastQ = -1, mTimer = 0, nextT = 0, step = 0;
+  const last = {}, loops = {}, set = () => G.meta.set;
+  const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+  const PENT = [0, 2, 4, 7, 9], ladder = n => 60 + 12 * Math.floor(n / 5) + PENT[n % 5];   // C major pentatonic ladder
+  const lim = (k, ms) => { const n = performance.now(); if (n - (last[k] || 0) < ms) return false; last[k] = n; return true; };
+
+  function mkBuf(kind) {
+    const len = ctx.sampleRate * 2, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0); let l = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; if (kind === 'brown') { l = (l + .02 * w) / 1.02; d[i] = l * 3.5; } else d[i] = w; }
+    return b;
+  }
+  function init() {
+    if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return ctx; }
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; return null; }
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.knee.value = 24; comp.ratio.value = 4; comp.attack.value = .004; comp.release.value = .22;
+    master = ctx.createGain(); sfxBus = ctx.createGain(); musBus = ctx.createGain(); arpBus = ctx.createGain();
+    sfxBus.connect(master); musBus.connect(master); master.connect(comp); comp.connect(ctx.destination);
+    arpBus.connect(musBus);                                  // arpeggio bus gets a soft feedback echo
+    const dly = ctx.createDelay(1), fb = ctx.createGain(), wet = ctx.createGain(), lp = ctx.createBiquadFilter();
+    dly.delayTime.value = .28; fb.gain.value = .3; wet.gain.value = .32; lp.type = 'lowpass'; lp.frequency.value = 2200;
+    arpBus.connect(dly); dly.connect(lp); lp.connect(fb); fb.connect(dly); lp.connect(wet); wet.connect(musBus);
+    white = mkBuf('white'); brown = mkBuf('brown');
+    vols(true); nextT = ctx.currentTime + .2; step = 0; sched();
+    return ctx;
+  }
+  function vols(now) {
+    if (!ctx) return; const t = ctx.currentTime, s = set(), k = now ? 0.001 : .06;
+    master.gain.setTargetAtTime(s.mute ? 0 : 1, t, k);
+    sfxBus.gain.setTargetAtTime(s.sfx * 1.5, t, k);
+    musBus.gain.setTargetAtTime(s.music * 1.3 * duck, t, now ? .001 : .25);
+  }
+  /* one oscillator voice: o = { f, f2, type, t, dur, vol, att, sus, lp, det, bus, pri, m } */
+  function tone(o) {
+    if (!ctx || (!o.m && voices >= (o.pri ? 16 : 8))) return;
+    const t = o.t != null ? o.t : ctx.currentTime, dur = o.dur || .15, osc = ctx.createOscillator(), g = ctx.createGain(), v = o.vol || .1, a = o.att || .006;
+    osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(o.f, t); if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t + dur); if (o.det) osc.detune.value = o.det;
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v, t + a); if (o.sus) g.gain.setValueAtTime(v, t + dur * o.sus); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    let out = g; osc.connect(g);
+    if (o.lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; g.connect(f); out = f; }
+    out.connect(o.bus || sfxBus); osc.start(t); osc.stop(t + dur + .03);
+    if (!o.m) voices++;
+    osc.onended = () => { if (!o.m) voices--; g.disconnect(); if (out !== g) out.disconnect(); };
+  }
+  /* one filtered-noise voice: o = { type, f0, f1, q, t, dur, vol, att, brown, bus, pri } */
+  function noise(o) {
+    if (!ctx || voices >= (o.pri ? 16 : 8)) return;
+    const t = o.t != null ? o.t : ctx.currentTime, dur = o.dur || .1, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), v = o.vol || .1, a = o.att || .008;
+    src.buffer = o.brown ? brown : white; src.loop = true; f.type = o.type || 'bandpass'; f.Q.value = o.q || .8;
+    f.frequency.setValueAtTime(o.f0 || 1000, t); if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(o.bus || sfxBus); src.start(t, Math.random() * 1.5); src.stop(t + dur + .03);
+    voices++; src.onended = () => { voices--; g.disconnect(); f.disconnect(); };
+  }
+  const arp = (notes, o) => notes.forEach((m, i) => tone(Object.assign({ f: midi(m), t: ctx.currentTime + i * (o.gap || .07) }, o)));
+
+  /* ---- gameplay sounds ---- */
+  const BUYS = { H: [64, [0, 4, 7, 12], 'triangle', .06], G: [67, [0, 2, 4, 7], 'sine', .07], Y: [72, [0, 7, 12, 16], 'square', .05, 3000], F: [57, [0, 7, 12, 19], 'sawtooth', .06, 1800],
+    R: [69, [12, 9, 4, 0], 'triangle', .07], I: [62, [0, 5, 7, 12], 'sine', .07], M: [48, [0, 7, 12], 'square', .08, 1400], T: [50, [0, 7, 0, 12], 'sawtooth', .07, 1200],
+    D: [76, [0, 4, 7, 9, 12], 'triangle', .045], J: [71, [0, 2, 7, 9], 'sine', .06], P: [65, [0, 4, 9, 12], 'triangle', .06], L: [60, [0, 4, 7, 12, 16], 'sine', .09] };
+  const EV = {
+    water(prog) { if (!lim('water', 85)) return; const p = prog == null ? .5 : prog; noise({ type: 'bandpass', f0: 500 + 1700 * p, f1: 900 + 2300 * p, q: .9, dur: .11, vol: .07 }); },
+    ripe() { if (!lim('ripe', 140)) return; const f = [1175, 1319, 1568][(Math.random() * 3) | 0]; tone({ f, dur: .32, vol: .045, att: .004 }); tone({ f: f * 2, dur: .2, vol: .015 }); },
+    harvest(a) { const c = a && a.n || 1, by = a && a.by, own = by === 'ring'; if (!lim('harv', own ? 45 : 95)) return;
+      const f = midi(ladder(Math.min(14, c - 1))), v = own ? .1 : .05;
+      tone({ f, type: 'triangle', dur: .17, vol: v, att: .003 }); tone({ f: f * 2, dur: .1, vol: v * .35, att: .003 }); },
+    buy(n) { if (!lim('buy', 120)) return; const b = BUYS[n && n.c || 'L'] || BUYS.L; arp(b[1].map(s => b[0] + s), { type: b[2], gap: b[3], dur: .2, vol: .08, lp: b[4], pri: 1 }); },
+    deny() { if (!lim('deny', 220)) return; tone({ f: 130, f2: 92, type: 'sawtooth', dur: .2, vol: .07, lp: 520 }); },
+    hover() { if (!lim('hover', 70)) return; tone({ f: 1700, dur: .03, vol: .012, att: .002 }); },
+    click() { if (!lim('click', 50)) return; tone({ f: 660, f2: 520, type: 'triangle', dur: .05, vol: .03, att: .002 }); },
+    irr() { if (!lim('irr', 300)) return; noise({ type: 'bandpass', f0: 300, f1: 1800, q: 1.4, dur: .4, vol: .07, att: .12 }); tone({ f: 180, f2: 120, dur: .12, vol: .05 }); },
+    mole() { if (!lim('mole', 300)) return; tone({ f: 110, f2: 55, dur: .2, vol: .12 }); noise({ type: 'lowpass', f0: 500, f1: 200, dur: .16, vol: .06 }); },
+    jet() { if (!lim('jet', 600)) return; noise({ type: 'highpass', f0: 1500, f1: 3500, q: .7, dur: .28, vol: .04, att: .05 }); },
+    tally(i) { if (!lim('tally', 60)) return; tone({ f: midi(ladder(Math.min(14, i))), type: 'triangle', dur: .12, vol: .05, pri: 1 }); },
+    total() { arp([72, 79, 84], { type: 'triangle', gap: .06, dur: .3, vol: .07, pri: 1 }); },
+    best() { arp([84, 88, 91, 96], { type: 'sine', gap: .05, dur: .35, vol: .06, pri: 1 }); noise({ type: 'highpass', f0: 5000, dur: .3, vol: .02, pri: 1 }); },
+    ach() { arp([79, 86], { type: 'sine', gap: .09, dur: .3, vol: .07, pri: 1 }); },
+    dayStart() { lastTick = -1; arp([72, 76, 79], { type: 'triangle', gap: .09, dur: .4, vol: .06, pri: 1 }); tone({ f: midi(84), dur: .6, vol: .02, t: ctx.currentTime + .27, pri: 1 }); },
+    tick(s) { tone({ f: s <= 1 ? 1500 : 1100, type: 'square', dur: .04, vol: .035, lp: 3000, pri: 1 }); },
+    dayEnd() { arp([67, 72, 76, 79], { type: 'triangle', gap: .1, dur: .5, vol: .07, pri: 1 }); [60, 64, 67].forEach(m => tone({ f: midi(m), t: ctx.currentTime + .42, dur: 1.1, vol: .035, att: .05, sus: .5, pri: 1 })); },
+    dia() { arp([72, 76, 79, 84, 88], { type: 'triangle', gap: .09, dur: .5, vol: .07, pri: 1 }); noise({ type: 'highpass', f0: 5000, f1: 8000, dur: .6, vol: .02, att: .1, pri: 1 }); },
+    prestige() { tone({ f: midi(36), dur: 1.6, vol: .1, att: .02, pri: 1 }); arp([60, 64, 67, 72, 76, 79, 84], { type: 'triangle', gap: .1, dur: .6, vol: .07, pri: 1 }); [72, 76, 79, 84].forEach(m => tone({ f: midi(m), t: ctx.currentTime + .75, dur: 1.4, vol: .04, att: .04, sus: .5, pri: 1 })); },
+    warn() { noise({ brown: true, type: 'lowpass', f0: 90, f1: 150, q: .7, dur: 1.3, vol: .3, att: 1.2, pri: 1 }); },
+    zap() { noise({ type: 'highpass', f0: 2500, f1: 800, q: .7, dur: .25, vol: .2, pri: 1 }); noise({ brown: true, type: 'lowpass', f0: 220, f1: 60, q: .7, dur: 1.2, vol: .38, att: .01, pri: 1 }); tone({ f: 70, f2: 38, dur: 1, vol: .22, pri: 1 }); },
+  };
+  function sfx(k, a) { if (!ctx || ctx.state !== 'running' || set().mute || !set().sfx) return; const f = EV[k]; if (f) f(a); }
+
+  /* ---- machine loops: always-running sources whose gain fades with the machine state ---- */
+  function mkLoop(kind) {
+    const g = ctx.createGain(); g.gain.value = 0; g.connect(sfxBus);
+    const noiseSrc = buf => { const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; return s; };
+    if (kind === 'rain') { const s = noiseSrc(white), f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = .5; s.connect(f); f.connect(g); s.start(); }
+    else if (kind === 'tractor') {
+      const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), f = ctx.createBiquadFilter(), s = noiseSrc(brown);
+      o.type = 'sawtooth'; o.frequency.value = 44; lfo.frequency.value = 9; lg.gain.value = 6; lfo.connect(lg); lg.connect(o.frequency);
+      f.type = 'lowpass'; f.frequency.value = 170; o.connect(f); s.connect(f); f.connect(g); o.start(); lfo.start(); s.start();
+    } else {
+      const o = ctx.createOscillator(), trem = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain(), f = ctx.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.value = 190; trem.gain.value = .6; lfo.frequency.value = 34; lg.gain.value = .4; lfo.connect(lg); lg.connect(trem.gain);
+      f.type = 'bandpass'; f.frequency.value = 760; f.Q.value = 2; o.connect(trem); trem.connect(f); f.connect(g); o.start(); lfo.start();
+    }
+    return (loops[kind] = { g, v: 0 });
+  }
+  function loopTo(kind, v) {
+    let L = loops[kind]; if (!L) { if (v <= 0) return; L = mkLoop(kind); }
+    if (Math.abs(L.v - v) > .001) { L.v = v; L.g.gain.setTargetAtTime(v, ctx.currentTime, .2); }
+  }
+
+  /* ---- generative music: I, vi, IV, V in C. Notes are scheduled on the AudioContext clock a short way ahead ---- */
+  const CHORDS = [{ bass: 48, pad: [60, 64, 67], arp: [60, 64, 67, 69, 72] }, { bass: 45, pad: [57, 60, 64], arp: [57, 60, 64, 67, 69] },
+    { bass: 41, pad: [57, 60, 65], arp: [57, 60, 62, 64, 69] }, { bass: 43, pad: [55, 59, 62], arp: [55, 62, 64, 67, 69] }];
+  const ARPP = [0, 2, 1, 3, 2, 4, 3, 1], EIGHTH = 60 / 78 / 2;
+  const lv = (a, b) => Math.max(0, Math.min(1, (Math.log10(1 + rateSm) - a) / (b - a)));
+  function playStep(s, t) {
+    const sv = set(); if (!sv.music || sv.mute) return;
+    const ch = CHORDS[((s >> 3) & 3)], pos = s & 7, arpL = Math.max(.25, lv(.3, 2)), bassL = Math.max(.45, lv(.9, 2.4)), hiL = lv(2, 4), percL = lv(3, 5);
+    if (pos === 0) {
+      ch.pad.forEach(m => tone({ f: midi(m), type: 'sawtooth', t, dur: 3.2, att: .55, sus: .62, vol: .03, lp: 650, det: (Math.random() - .5) * 12, bus: musBus, m: 1 }));
+      tone({ f: midi(ch.bass), type: 'triangle', t, dur: 1.4, vol: .17 * bassL, lp: 420, bus: musBus, m: 1 });
+    } else if (pos === 4 || (pos === 6 && bassL > .6)) tone({ f: midi(ch.bass + (pos === 6 ? 7 : 0)), type: 'triangle', t, dur: .8, vol: .12 * bassL, lp: 420, bus: musBus, m: 1 });
+    if (Math.random() < .3 + .7 * arpL) tone({ f: midi(ch.arp[ARPP[pos]] + 12), type: 'triangle', t, dur: .55, vol: .045 + .05 * arpL, att: .004, bus: arpBus, m: 1 });
+    if (hiL > .05 && (pos & 1) && Math.random() < .6) tone({ f: midi(ch.arp[(pos + 2) % 5] + 24), type: 'sine', t, dur: .3, vol: .03 * hiL, att: .003, bus: arpBus, m: 1 });
+    if (percL > .05) { const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); src.buffer = white; f.type = 'highpass'; f.frequency.value = 6500;
+      g.gain.setValueAtTime(.001, t); g.gain.linearRampToValueAtTime(.025 * percL * ((pos & 3) === 2 ? 1.4 : 1), t + .003); g.gain.exponentialRampToValueAtTime(.0001, t + .05);
+      src.connect(f); f.connect(g); g.connect(musBus); src.start(t, Math.random()); src.stop(t + .06); src.onended = () => { g.disconnect(); f.disconnect(); }; }
+  }
+  function sched() {
+    mTimer = setTimeout(sched, 30);
+    if (!ctx) return;
+    if (ctx.state !== 'running') { nextT = Math.max(nextT, ctx.currentTime + .05); return; }
+    while (nextT < ctx.currentTime + .25) { playStep(step, nextT); nextT += EIGHTH; step++; }
+  }
+
+  return {
+    unlock: init, vols, get ready() { return !!ctx; },
+    sfx, duck(on) { duck = on ? .3 : 1; vols(); },
+    vis(v) { if (!ctx) return; if (v) ctx.resume(); else ctx.suspend(); },
+    frame(dt) {
+      if (!ctx) return;
+      const live = S.phase === 'day' && !S.paused && !set().mute && set().sfx > 0;
+      rateSm += ((S.phase === 'day' ? incomeRate() : 0) - rateSm) * Math.min(1, dt * .8);
+      loopTo('rain', live && M.u.rain && S.rain.on ? .09 : 0);
+      loopTo('tractor', live && M.u.tractor && S.tr.wait <= 0 ? .3 : 0);
+      loopTo('drone', live && M.u.drone ? .035 : 0);
+      if (live && M.u.jet) { const q = Math.floor(S.jt.a / (Math.PI / 2)); if (q !== lastQ) { lastQ = q; EV.jet(); } }
+      if (live) { const sec = Math.ceil(S.t); if (sec <= 5 && sec > 0 && sec !== lastTick) { lastTick = sec; sfx('tick', sec); } }
+    },
+  };
+})();
+
+/* ===== Keep Watering clone: UI, renderer, audio hooks, Pyodide (v3) ===== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const icons = () => { try { lucide.createIcons(); } catch (e) {} };
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)');       // every new animation checks this
+const MOBILE = window.matchMedia('(max-width: 1023.98px)');
+let tab = 'skills', menuSec = 'stats', filt = 'All', stat = 'avail', conf = {}, autoT = 0, PYF = null, hl = null, sortK = 'price', view = 'list', plan = null;
+const secOpen = {};                                       // which <details> sections the player opened
+const PY = { ready: false, py: null, note: 'Python: loading…' };
+const lab = { n: 200, pat: 'random', idx: 40, sort: null };
+const ui = () => G.meta.ui;
+
+/* ---------- progressive disclosure: everything is derived from existing progress, so veterans are never re-gated ---------- */
+const prestigeUnlocked = () => G.meta.pres > 0 || G.meta.dia > 0 || G.meta.heir.length > 0 || G.run.dia > 0 || G.run.moneyRun >= 3000;
+const afterPrestige = () => G.meta.pres > 0 || G.meta.heir.length > 0 || G.meta.dia > 0;
+const advAuto = () => Math.max(G.run.nodes.length, G.meta.life.ever.length) >= 10;
+const advOpen = () => ui().adv === null || ui().adv === undefined ? advAuto() : !!ui().adv;
+const markSeen = id => { if (!ui().seen[id]) { ui().seen[id] = 1; save(); } };
+
+/* ---------- particles: a fixed pool (Stack of free objects) plus a Deque of live ones, so nothing is allocated per frame ---------- */
+class Particles {
+  constructor(cap) {
+    this.cap = cap; this.free = new Stack(); this.live = new Deque(cap);
+    for (let i = 0; i < cap; i++) this.free.push({ k: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, g: 0, life: 0, max: 1, sz: 1, col: '#fff', x0: 0, y0: 0, cx: 0, cy: 0, tx: 0, ty: 0, amt: 0 });
+  }
+  get size() { return this.live.size; }
+  spawn() { const p = this.free.size ? this.free.pop() : this.live.popFront(); this.live.pushBack(p); return p; }   // full pool: recycle the oldest
+  step(dt, fn) { for (let n = this.live.size; n > 0; n--) { const p = this.live.popFront(); fn(p, dt); if (p.life > 0) this.live.pushBack(p); else this.free.push(p); } }
+  clear() { while (this.live.size) this.free.push(this.live.popFront()); }
+}
+const FX = new Particles(110), COIN = new Particles(40);       // 150 live at most
+let coinInFlight = 0, coinArrived = 0, shownMoney = 0, shake = 0, lastCoin = 0, rectCache = { t: 0, x: 0, y: 0 };
+const combo = { n: 0, t: 0, shown: 0 };
+const fxStep = (p, dt) => { p.life -= dt; if (p.life <= 0) return; p.vz -= p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; if (p.z < 0) { p.z = 0; p.vz *= -.25; p.vx *= .5; p.vy *= .5; } };
+const coinStep = (p, dt) => { p.life -= dt; if (p.life <= 0) { coinInFlight -= p.amt; coinArrived++; } };
+function fxDrops(gx, gy, n, rad, hi) {
+  for (let k = 0; k < n && FX.size < 100; k++) {
+    const p = FX.spawn(); p.k = 0; p.x = gx + (Math.random() - .5) * 2 * rad; p.y = gy + (Math.random() - .5) * 2 * rad; p.z = (hi ? 34 : 16) + Math.random() * 14;
+    p.vx = (Math.random() - .5) * .4; p.vy = (Math.random() - .5) * .4; p.vz = 0; p.g = 230; p.life = p.max = .5 + Math.random() * .25; p.sz = 2; p.col = '#7cc8ff';
+  }
+}
+function fxBurst(gx, gy, col) {
+  for (let k = 0; k < 8 && FX.size < 100; k++) {
+    const p = FX.spawn(); p.k = 1; p.x = gx; p.y = gy; p.z = 6; p.vx = (Math.random() - .5) * 2.2; p.vy = (Math.random() - .5) * 2.2; p.vz = 50 + Math.random() * 70; p.g = 260;
+    p.life = p.max = .45 + Math.random() * .25; p.sz = 2.4; p.col = col;
+  }
+}
+function fxPuff(gx, gy) {
+  for (let k = 0; k < 12; k++) {
+    const p = FX.spawn(); p.k = 2; p.x = gx; p.y = gy; p.z = 4 + Math.random() * 8; p.vx = (Math.random() - .5) * 1.8; p.vy = (Math.random() - .5) * 1.8; p.vz = 14 + Math.random() * 24; p.g = 30;
+    p.life = p.max = .5 + Math.random() * .35; p.sz = 3 + Math.random() * 3; p.col = '#f4f1e8';
+  }
+}
+function moneyTarget() {
+  const n = performance.now();
+  if (n - rectCache.t > 300) { const r = $('#chipMoney').getBoundingClientRect(); rectCache = { t: n, x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  return rectCache;
+}
+function fxCoin(gx, gy, amt) {                              // a coin flies from the plot to the Money chip
+  const now = performance.now(); if (RM.matches || !COIN.free.size || now - lastCoin < 40) return; lastCoin = now;
+  const r = cv.getBoundingClientRect(), p = COIN.spawn(), tg = moneyTarget();
+  p.k = 3; p.x0 = r.left + OX + (gx - gy) * TW / 2; p.y0 = r.top + OY + (gx + gy) * TH / 2 - 14 * SC; p.tx = tg.x; p.ty = tg.y;
+  p.cx = (p.x0 + p.tx) / 2 + (Math.random() - .5) * 60; p.cy = Math.min(p.y0, p.ty) - 40 - Math.random() * 40; p.life = p.max = .6 + Math.random() * .15; p.amt = amt; coinInFlight += amt;
+}
+function fxReset() { FX.clear(); COIN.clear(); coinInFlight = 0; coinArrived = 0; combo.n = 0; combo.t = 0; shownMoney = G.run.money; }
+function poofFor(n) {                                       // small poof where a new machine appears
+  if (!n || !n.eff || !n.eff.u) return; const u = n.eff.u, c = S.n / 2; let x = c, y = c;
+  if (u === 'rain') { x = S.rain.cx; y = S.rain.cy; } else if (u === 'drone') { x = S.dr.x; y = S.dr.y; } else if (u === 'tractor') { x = .5; y = .5; } else if (u === 'irr') y = .5;
+  fxPuff(x, y);
+}
+function showBanner(txt) { if (RM.matches) return; const b = $('#dayBanner'); b.textContent = txt; b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); }
+
+/* ---------- hooks from the core into audio and effects ---------- */
+HOOK.sfx = (k, a) => { if (k === 'zap' && !RM.matches) shake = .35; if (k === 'buy') poofFor(a); AUD.sfx(k, a); };
+HOOK.harvest = (p, v, by, cr) => {
+  combo.n = combo.t > 0 ? combo.n + 1 : 1; combo.t = 1;      // harvests within about a second chain
+  AUD.sfx('harvest', { n: combo.n, by }); fxBurst(p.i + .5, p.j + .5, cr.col); fxCoin(p.i + .5, p.j + .5, v);
+};
+HOOK.water = (src, x, y, prog, rx, rr) => { fxDrops(x, y, 3, Math.max(.4, rr * .8)); AUD.sfx('water', prog); };
+HOOK.splash = (gx, gy, r, src) => { fxDrops(gx, gy, 5, r * .7, true); if (src === 'drone' || src === 'rain' && G.run.farm === 'storm') AUD.sfx('water', .5); };
+HOOK.ripe = () => AUD.sfx('ripe');
+HOOK.mach = (k, a, b) => { if (k === 'irr') AUD.sfx('irr'); else if (k === 'mole') { AUD.sfx('mole'); fxPuff(a, b); } };
+HOOK.dayStart = () => { combo.n = 0; combo.t = 0; showBanner('Day ' + G.run.day); AUD.sfx('dayStart'); renderPanel(); };
+
+/* ---------- canvas renderer ---------- */
+const cv = $('#cv'), cx = cv.getContext('2d');
+let W = 1, H = 1, DPR = 1, TW = 64, TH = 32, OX = 0, OY = 0, SC = 1;
+function layout() {
+  const r = cv.parentElement.getBoundingClientRect(); DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = Math.max(200, r.width); H = Math.max(200, r.height); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const n = S.n; SC = Math.min(W / (n * 64 + 150), (H - 120) / (n * 32 + 100)); TW = 64 * SC; TH = 32 * SC;
+  const gh = n * TH + 12 * SC, top = 62, bot = H - 36; OX = W / 2; OY = top + Math.max(0, (bot - top - gh) / 2) + 12 * SC;
+  const cc = $('#coinCv'), d = Math.min(2, window.devicePixelRatio || 1); cc.width = innerWidth * d; cc.height = innerHeight * d;
+}
+const w2s = (gx, gy) => [OX + (gx - gy) * TW / 2, OY + (gx + gy) * TH / 2];
+const s2w = (sx, sy) => { const a = (sx - OX) / (TW / 2), b = (sy - OY) / (TH / 2); return [(a + b) / 2, (b - a) / 2]; };
+function poly(pts, fill, stroke) {
+  cx.beginPath(); pts.forEach((p, i) => i ? cx.lineTo(p[0], p[1]) : cx.moveTo(p[0], p[1])); cx.closePath();
+  if (fill) { cx.fillStyle = fill; cx.fill(); } if (stroke) { cx.strokeStyle = stroke; cx.lineWidth = 1; cx.stroke(); }
+}
+function wellipse(gx, gy, rx, ry, fill, stroke, lw) {
+  cx.beginPath();
+  for (let k = 0; k <= 36; k++) { const a = k / 36 * Math.PI * 2, p = w2s(gx + Math.cos(a) * rx, gy + Math.sin(a) * ry); k ? cx.lineTo(p[0], p[1]) : cx.moveTo(p[0], p[1]); }
+  cx.closePath(); if (fill) { cx.fillStyle = fill; cx.fill(); } if (stroke) { cx.strokeStyle = stroke; cx.lineWidth = lw || 2; cx.stroke(); }
+}
+const ART = {
+  radish: [[-2, -4, 4, 3, '#e0476b'], [-1, -5, 2, 1, '#f2a0b3'], [-2, -7, 1, 3, '#3f9b4a'], [1, -7, 1, 3, '#3f9b4a']],
+  tomato: [[-3, -6, 6, 5, '#e8402f'], [-2, -5, 2, 1, '#ff8a78'], [-1, -8, 2, 2, '#3f9b4a']],
+  potato: [[-3, -4, 6, 3, '#b58a4a'], [-2, -3, 1, 1, '#8a6530'], [1, -4, 1, 1, '#8a6530'], [-1, -7, 2, 3, '#3f9b4a']],
+  eggplant: [[-2, -8, 4, 7, '#6a3d9a'], [-1, -7, 1, 3, '#8a5cbc'], [-2, -10, 4, 2, '#3f9b4a']],
+  cabbage: [[-4, -6, 8, 5, '#6cc070'], [-2, -5, 4, 3, '#a6e2a0'], [-4, -4, 1, 3, '#4e9f54']],
+  corn: [[-1, -11, 3, 8, '#f2c230'], [-3, -9, 2, 6, '#4e9f54'], [2, -9, 2, 6, '#4e9f54'], [0, -12, 1, 2, '#f8e08a']],
+  pumpkin: [[-5, -6, 10, 6, '#f08a24'], [-1, -6, 1, 6, '#c46a14'], [2, -6, 1, 6, '#c46a14'], [-1, -8, 2, 2, '#3f9b4a']],
+};
+/* three growth stages: sprout (< 1/3 watered), mid (leafy, with a bud in the crop's colour), ripe (full sprite, bobbing) */
+const SPROUT = [[-1, -3, 2, 3, '#56b85f'], [-3, -2, 2, 2, '#3f9b4a'], [1, -2, 2, 2, '#3f9b4a']];
+const LEAFM = [[-3, -5, 6, 5, '#3f9b4a'], [-5, -4, 3, 3, '#56b85f'], [2, -4, 3, 3, '#56b85f'], [-1, -7, 2, 3, '#7bd17f']];
+function drawCrop(p, t) {
+  const [X0, Y0] = w2s(p.i + .5, p.j + .5), u = TW / 18;
+  const R = (x, y, w, h, c) => { cx.fillStyle = c; cx.fillRect(Math.round(X0 + x * u), Math.round(Y0 + y * u), Math.ceil(w * u), Math.ceil(h * u)); };
+  if (p.ripe) { const b = Math.sin(t * 4 + p.i * 1.7 + p.j) * .35; R(-4, 0, 8, 1.2, 'rgba(0,0,0,.18)'); for (const r of ART[CROPS[p.crop].id]) R(r[0], r[1] + b, r[2], r[3], r[4]); }
+  else if (p.water / p.req < .34) { for (const r of SPROUT) R(r[0], r[1], r[2], r[3], r[4]); }
+  else { for (const r of LEAFM) R(r[0], r[1], r[2], r[3], r[4]); R(-1, -3, 2, 2, CROPS[p.crop].col); }
+}
+/* ---- sky tint over the 30-second day: dawn, morning, noon, afternoon, dusk ---- */
+const SKYK = [[0, [255, 214, 170], [255, 240, 214]], [.2, [173, 225, 245], [225, 242, 214]], [.5, [150, 215, 247], [214, 239, 201]], [.8, [196, 225, 236], [238, 232, 190]], [1, [244, 170, 130], [250, 208, 160]]];
+function skyAt(u) {
+  let i = 0; while (i < SKYK.length - 2 && u > SKYK[i + 1][0]) i++;
+  const a = SKYK[i], b = SKYK[i + 1], k = Math.max(0, Math.min(1, (u - a[0]) / (b[0] - a[0])));
+  const mix = (p, q) => `rgb(${Math.round(p[0] + (q[0] - p[0]) * k)},${Math.round(p[1] + (q[1] - p[1]) * k)},${Math.round(p[2] + (q[2] - p[2]) * k)})`;
+  return [mix(a[1], b[1]), mix(a[2], b[2])];
+}
+const dayU = () => S.phase === 'day' ? 1 - S.t / DAY_LEN : S.phase === 'results' ? 1 : 0;
+const CLOUDS = [{ x: .08, y: .12, s: 1, v: 7 }, { x: .42, y: .22, s: .7, v: 5 }, { x: .74, y: .09, s: 1.2, v: 9 }, { x: .28, y: .31, s: .6, v: 4 }];
+const hash01 = k => { const s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+const TUFTS = Array.from({ length: 56 }, (_, k) => [hash01(k * 2 + 1), hash01(k * 2 + 2), hash01(k + 9)]);
+function drawSky(t, u) {
+  const [top, bot] = skyAt(u), hy = H * .42;
+  let g = cx.createLinearGradient(0, 0, 0, hy); g.addColorStop(0, top); g.addColorStop(1, bot); cx.fillStyle = g; cx.fillRect(0, 0, W, hy + 1);
+  const cl = RM.matches ? 0 : t;                                                  // clouds drift unless motion is reduced
+  cx.fillStyle = 'rgba(255,255,255,.82)';
+  for (const c of CLOUDS) {
+    const x = ((c.x * (W + 240) + cl * c.v) % (W + 240)) - 120, y = c.y * H * .8 + 14, s = c.s * Math.max(.6, SC * .8);
+    for (const [dx, dy, r] of [[-16, 3, 11], [0, -4, 15], [17, 2, 12], [2, 5, 12]]) { cx.beginPath(); cx.arc(x + dx * s, y + dy * s, r * s, 0, 7); cx.fill(); }
+  }
+  cx.fillStyle = 'rgba(120,190,110,.55)'; cx.beginPath(); cx.moveTo(0, hy);
+  for (let x = 0; x <= W + 20; x += 20) cx.lineTo(x, hy - (10 + 9 * Math.sin(x * .011 + 1) + 6 * Math.sin(x * .027)) * Math.max(.7, SC));
+  cx.lineTo(W, hy + 2); cx.lineTo(0, hy + 2); cx.fill();
+  g = cx.createLinearGradient(0, hy, 0, H); g.addColorStop(0, '#a9dc8a'); g.addColorStop(1, '#7fbf66'); cx.fillStyle = g; cx.fillRect(0, hy, W, H - hy);
+}
+function fenceLine(x0, y0, x1, y1, cnt) {
+  const hg = 11 * SC, pw = Math.max(2, 3 * SC), p0 = w2s(x0, y0), p1 = w2s(x1, y1);
+  cx.strokeStyle = '#b98a52'; cx.lineWidth = Math.max(1.5, 2 * SC);
+  for (const hh of [4, 8]) { cx.beginPath(); cx.moveTo(p0[0], p0[1] - hh * SC); cx.lineTo(p1[0], p1[1] - hh * SC); cx.stroke(); }
+  for (let k = 0; k <= cnt; k++) {
+    const f = k / cnt, x = Math.round(p0[0] + (p1[0] - p0[0]) * f - pw / 2), y = Math.round(p0[1] + (p1[1] - p0[1]) * f - hg);
+    cx.fillStyle = '#c9a26a'; cx.fillRect(x, y, Math.ceil(pw), Math.ceil(hg)); cx.fillStyle = '#e8cb94'; cx.fillRect(x, y, Math.ceil(pw), Math.max(1, Math.ceil(2 * SC)));
+  }
+}
+function drawGrass(n, th) {                                  // grass border sits one slab lower than the soil
+  cx.save(); cx.translate(0, th);
+  const e = 1.15, a = w2s(-e, -e), b = w2s(n + e, -e), c = w2s(n + e, n + e), d = w2s(-e, n + e);
+  poly([a, b, c, d], '#79c566', '#5aa04b');
+  const e2 = .62; poly([w2s(-e2, -e2), w2s(n + e2, -e2), w2s(n + e2, n + e2), w2s(-e2, n + e2)], '#86d173');
+  for (const [r1, r2, r3] of TUFTS) {
+    const gx = -1.05 + (n + 2.1) * r1, gy = -1.05 + (n + 2.1) * r2; if (gx > -.46 && gx < n + .46 && gy > -.46 && gy < n + .46) continue;
+    const [x, y] = w2s(gx, gy), s = Math.max(1.5, 2 * SC); cx.fillStyle = r3 > .5 ? '#5aa04b' : '#a6e58f'; cx.fillRect(Math.round(x), Math.round(y), Math.ceil(s), Math.ceil(s * 2)); cx.fillRect(Math.round(x + s * 1.6), Math.round(y + s * .6), Math.ceil(s), Math.ceil(s * 1.4));
+  }
+  const q = .42; fenceLine(-q, -q, n + q, -q, n + 1); fenceLine(-q, -q, -q, n + q, n + 1);
+  cx.restore();
+}
+function drawFenceFront(n, th) { cx.save(); cx.translate(0, th); const q = .42; fenceLine(n + q, -q, n + q, n + q, n + 1); fenceLine(-q, n + q, n + q, n + q, n + 1); cx.restore(); }
+function drawFX() {                                          // pooled world-space particles, projected inline (no allocations)
+  const q = FX.live;
+  for (let i = 0; i < q.size; i++) {
+    const p = q.at(i), sx = OX + (p.x - p.y) * TW / 2, sy = OY + (p.x + p.y) * TH / 2 - p.z * SC, a = Math.max(0, p.life / p.max);
+    cx.globalAlpha = p.k === 2 ? a * .75 : a; cx.fillStyle = p.col;
+    if (p.k === 0) cx.fillRect(sx, sy, Math.max(1.5, 2 * SC), Math.max(3, 4 * SC));
+    else if (p.k === 1) { const s = p.sz * SC * 1.4; cx.fillRect(sx - s / 2, sy - s / 2, s, s); }
+    else { cx.beginPath(); cx.arc(sx, sy, p.sz * SC * (1 + (1 - a)), 0, 7); cx.fill(); }
+  }
+  cx.globalAlpha = 1;
+}
+const coinCx = $('#coinCv').getContext('2d'); let coinHad = false;
+function drawCoins() {                                       // coins fly over the page to the Money chip
+  const c = $('#coinCv'); if (!COIN.size) { if (coinHad) { coinCx.setTransform(1, 0, 0, 1, 0, 0); coinCx.clearRect(0, 0, c.width, c.height); coinHad = false; } return; }
+  const d = c.width / innerWidth; coinHad = true; coinCx.setTransform(d, 0, 0, d, 0, 0); coinCx.clearRect(0, 0, innerWidth, innerHeight);
+  for (let i = 0; i < COIN.size; i++) {
+    const p = COIN.live.at(i), t = Math.min(1, 1 - p.life / p.max), e = t * t * (3 - 2 * t), u = 1 - e, x = u * u * p.x0 + 2 * u * e * p.cx + e * e * p.tx, y = u * u * p.y0 + 2 * u * e * p.cy + e * e * p.ty;
+    coinCx.fillStyle = '#b8780a'; coinCx.beginPath(); coinCx.arc(x, y, 6, 0, 7); coinCx.fill(); coinCx.fillStyle = '#ffd34d'; coinCx.beginPath(); coinCx.arc(x, y, 4.6, 0, 7); coinCx.fill(); coinCx.fillStyle = '#fff3b8'; coinCx.fillRect(x - 2, y - 3, 2, 2);
+  }
+}
+function drawScene(t) {
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0); cx.imageSmoothingEnabled = false;
+  if (shake > 0) { const a = 8 * shake / .35; cx.translate((Math.random() - .5) * a, (Math.random() - .5) * a); }
+  const n = S.n, u = dayU(), th = 12 * SC;
+  drawSky(t, u); drawGrass(n, th);
+  const a = w2s(0, 0), b = w2s(n, 0), c = w2s(n, n), d = w2s(0, n);
+  poly([d, c, [c[0], c[1] + th], [d[0], d[1] + th]], '#6b4430'); poly([c, b, [b[0], b[1] + th], [c[0], c[1] + th]], '#7f5338');
+  poly([a, b, c, d], '#8a5d3d');
+  for (const p of S.plots) {
+    const q = [w2s(p.i, p.j), w2s(p.i + 1, p.j), w2s(p.i + 1, p.j + 1), w2s(p.i, p.j + 1)];
+    poly(q, (p.i + p.j) & 1 ? '#a06f48' : '#97663f', '#7a4f33');
+    if (p.crop >= 0) { const wet = p.ripe ? .55 : Math.min(1, p.water / p.req); if (wet > 0) poly(q, `rgba(38,22,12,${(.42 * wet).toFixed(3)})`); }   // soil darkens as it is watered
+  }
+  if (!S.order) S.order = sortBy(S.plots, p => p.i + p.j);   // stable merge sort, back to front
+  for (const p of S.order) if (p.crop >= 0) drawCrop(p, t);
+  drawFenceFront(n, th);
+  const lw = Math.max(1.5, 3 * SC);
+  if (M.u.irr && S.irr.flash > 0) for (const row of [S.irr.row].concat(M.twin ? [n - 1 - S.irr.row] : [])) { const p1 = w2s(0, row + .5), p2 = w2s(n, row + .5); cx.strokeStyle = `rgba(70,170,240,${S.irr.flash * 1.6})`; cx.lineWidth = 9 * SC; cx.beginPath(); cx.moveTo(p1[0], p1[1]); cx.lineTo(p2[0], p2[1]); cx.stroke(); }
+  if (M.u.mole && S.mole.vis > 0) {
+    const mo = S.mole; cx.strokeStyle = 'rgba(70,44,28,.8)'; cx.lineWidth = Math.max(2, 5 * SC); cx.setLineDash([6 * SC, 5 * SC]); cx.beginPath();
+    mo.path.forEach(([gx, gy], k) => { const [px, py] = w2s(gx, gy); if (k) cx.lineTo(px, py); else cx.moveTo(px, py); }); cx.stroke(); cx.setLineDash([]);
+    const [x, y] = w2s(mo.x, mo.y); cx.fillStyle = '#5a3a26'; cx.beginPath(); cx.ellipse(x, y, 10 * SC, 5 * SC, 0, 0, 7); cx.fill(); cx.fillStyle = '#2d2420'; cx.beginPath(); cx.arc(x, y - 5 * SC, 4.5 * SC, 0, 7); cx.fill(); cx.fillStyle = '#f2a0b3'; cx.fillRect(x - 1 * SC, y - 4 * SC, 2 * SC, 2 * SC);
+  }
+  if (M.u.tractor && S.tr.wait <= 0) { const [x, y] = w2s(S.tr.x, S.tr.j + .5); cx.fillStyle = '#c0392b'; cx.fillRect(x - 9 * SC, y - 12 * SC, 18 * SC, 9 * SC); cx.fillStyle = '#f5d76e'; cx.fillRect(x + 2 * SC, y - 17 * SC, 6 * SC, 6 * SC); cx.fillStyle = '#222'; cx.fillRect(x - 10 * SC, y - 5 * SC, 6 * SC, 5 * SC); cx.fillRect(x + 4 * SC, y - 5 * SC, 6 * SC, 5 * SC); }
+  if (M.u.jet) { const j = S.jt, c0 = n / 2, len = n * .72, p1 = w2s(c0 - Math.cos(j.a) * len, c0 - Math.sin(j.a) * len), p2 = w2s(c0 + Math.cos(j.a) * len, c0 + Math.sin(j.a) * len);
+    cx.strokeStyle = 'rgba(120,225,255,.35)'; cx.lineWidth = 14 * SC; cx.beginPath(); cx.moveTo(p1[0], p1[1]); cx.lineTo(p2[0], p2[1]); cx.stroke();
+    cx.strokeStyle = '#bff3ff'; cx.lineWidth = 3 * SC; cx.stroke(); const [x, y] = w2s(c0, c0); cx.fillStyle = '#2b6f8f'; cx.fillRect(x - 6 * SC, y - 10 * SC, 12 * SC, 10 * SC); }
+  if (M.u.drone) { const [x, y] = w2s(S.dr.x, S.dr.y); cx.fillStyle = 'rgba(0,0,0,.18)'; cx.beginPath(); cx.ellipse(x, y, 8 * SC, 4 * SC, 0, 0, 7); cx.fill();
+    const yy = y - 26 * SC; cx.fillStyle = '#3a4a57'; cx.fillRect(x - 6 * SC, yy - 2 * SC, 12 * SC, 5 * SC); cx.fillStyle = '#9fb6c4'; const w = Math.sin(t * 40) * 3 * SC; cx.fillRect(x - 12 * SC + w, yy - 4 * SC, 8 * SC, 2 * SC); cx.fillRect(x + 4 * SC - w, yy - 4 * SC, 8 * SC, 2 * SC); }
+  if (M.u.rain && S.rain.on) { const [x, y] = w2s(S.rain.cx, S.rain.cy), yy = y - 42 * SC;
+    cx.fillStyle = '#eef4f8'; for (const [dx, dy, r] of [[-14, 2, 11], [0, -5, 14], [14, 2, 11], [0, 4, 12]]) { cx.beginPath(); cx.arc(x + dx * SC, yy + dy * SC, r * SC, 0, 7); cx.fill(); }
+    cx.strokeStyle = '#4aa8e8'; cx.lineWidth = lw * .7; cx.beginPath(); for (let k = 0; k < 9; k++) { const dx = (k - 4) * 6 * SC, ph = (t * 2.2 + k * .37) % 1; cx.moveTo(x + dx, yy + 12 * SC + ph * 40 * SC); cx.lineTo(x + dx - 2 * SC, yy + 18 * SC + ph * 40 * SC); } cx.stroke(); }
+  drawFX();
+  if (S.mouse) {
+    const rr = M.ringR, rx = M.swing ? rr * 2.4 : rr;
+    wellipse(S.rx, S.ry, rx, rr, 'rgba(90,190,255,.20)', '#ffffff', 2.2); wellipse(S.rx, S.ry, rx, rr, null, 'rgba(40,130,210,.9)', 1);
+  }
+  if (u > .8) { cx.fillStyle = `rgba(90,50,110,${(.14 * (u - .8) / .2).toFixed(3)})`; cx.fillRect(0, 0, W, H); }   // dusk tint
+  if (G.run.farm === 'storm') {
+    cx.fillStyle = 'rgba(40,55,90,.16)'; cx.fillRect(0, 0, W, H);
+    if (S.storm.warn > 0) { wellipse(S.storm.x, S.storm.y, 1.3, 1.3, `rgba(255,70,60,${.15 + .25 * Math.abs(Math.sin(t * 14))})`, '#ff5a4a', 2); }
+    if (S.storm.flash > 0) { cx.fillStyle = `rgba(255,255,230,${S.storm.flash * 2.2})`; cx.fillRect(0, 0, W, H); }
+  }
+  cx.font = `${Math.max(11, 15 * SC)}px 'Pixelify Sans', monospace`; cx.textAlign = 'center';
+  for (let i = 0; i < S.fx.size; i++) { const f = S.fx.at(i), [x, y] = w2s(f.x, f.y); cx.globalAlpha = Math.max(0, f.life / f.max); cx.fillStyle = '#10343c'; cx.fillText(f.txt, x + 1, y - 22 * SC + 1); cx.fillStyle = '#ffe27a'; cx.fillText(f.txt, x, y - 22 * SC); }
+  cx.globalAlpha = 1;
+}
+
+/* ---------- panels: Upgrades and Prestige ---------- */
+const SORT_UI = { price: ['Price, low to high', n => n.cost, 0], pricedesc: ['Price, high to low', n => n.cost, 1], name: ['Name, A to Z', n => n.name, 0], power: ['Power score', n => power(n), 1] };
+const PYC = new HashTable();                           // memo of Python cross-checks
+function pyCheck(kind, key, payload, same) {
+  if (!PY.ready) return null;
+  const k = kind + '|' + key, h = PYC.get(k); if (h !== undefined) return h;
+  let r = false; try { r = !!same(JSON.parse(PY.py.globals.get('run_planner')(kind, JSON.stringify(payload)))); } catch (e) { r = false; }
+  PYC.set(k, r); return r;
+}
+const badge = v => v === null ? '' : `<span class="chip ${v ? 'on' : ''}" title="The same plan was recomputed by the Python OOP planner in Pyodide">${v ? 'Python agrees' : 'Python differs'}</span>`;
+function poolShares() { const tot = S.seeds.root ? S.seeds.root.sum : 0; return CROPS.map(c => { const nd = S.seeds.find(c.water); return tot && nd ? nd.w / tot : 0; }); }
+const NST = n => OWN.has(n.id) ? 'own' : !reqOk(n) ? 'lock' : G.run.money >= n.cost ? 'buy' : 'poor';
+
+/* branch -> [label, Lucide icon, tile colour]; one card per branch shows its next upgrade */
+const BR = { H: ['Hands', 'hand', '#e8963a'], G: ['Growth', 'sprout', '#3a9a49'], Y: ['Yield', 'coins', '#d99a12'], F: ['Force', 'zap', '#6b6be6'], R: ['Rain', 'cloud-rain', '#3a9fe0'], I: ['Irrigator', 'waves', '#1fa3a3'],
+  M: ['Mole', 'shovel', '#8a5d3d'], T: ['Tractor', 'truck', '#c0392b'], D: ['Drone', 'plane', '#5b7a8c'], J: ['Water Jet', 'droplets', '#1ab3d6'], P: ['Pickers', 'shopping-basket', '#d4577f'], L: ['Legacy', 'crown', '#8a5cd0'] };
+const CHAIN = {}; NODES.forEach(n => (CHAIN[n.c] = CHAIN[n.c] || []).push(n));       // each branch in buying order
+const prereqName = n => !n.req.length ? '' : n.req[0] === '@m' ? 'Any machine' : NODE[n.req[0]].name;
+
+function ucard(n, o = {}) {
+  const st = NST(n), [bn, ic, col] = BR[n.c], R = G.run, rt = o.rt, on = rt && rt.ids.includes(n.id);
+  const pc = st !== 'own' ? TREE.costTo(n.id, id => OWN.has(id)) : 0;
+  const tip = `${bn} branch. Power score ${power(n)}${pc > n.cost ? '. Cheapest path to it: $' + fmt(pc) : ''}${n.c === 'L' ? '. Legacy upgrades are small bonuses' : ''}`;
+  let right;
+  if (st === 'buy') right = `<div class="pr"><button class="btn go sm" data-act="buy" data-id="${n.id}" aria-label="Buy ${esc(n.name)} for $${fmt(n.cost)}">Buy · $${fmt(n.cost)}</button></div>`;
+  else if (st === 'poor') right = `<div class="pr"><button class="btn poor sm" data-act="buy" data-id="${n.id}" aria-label="${esc(n.name)} costs $${fmt(n.cost)}. Not enough money yet">$${fmt(n.cost)}</button><div class="pbar"><i style="width:${Math.min(100, R.money / n.cost * 100).toFixed(1)}%"></i></div></div>`;
+  else if (st === 'lock') right = `<div class="pr"><div class="need"><i data-lucide="lock" class="w-3.5 h-3.5 shrink-0"></i><span>Needs ${esc(prereqName(n))}</span></div></div>`;
+  else right = `<div class="pr"><span class="chip on"><i data-lucide="check" class="w-3.5 h-3.5"></i>Owned</span></div>`;
+  const route = o.adv && st !== 'own' ? `<button class="rt" data-act="route" data-id="${n.id}" title="Plan the cheapest route here" aria-label="Plan route to ${esc(n.name)}"><i data-lucide="git-branch" class="w-3.5 h-3.5"></i></button>` : '';
+  return `<div class="ucard ${st}${on ? ' onroute' : ''}${hl === n.id ? ' hl' : ''}" data-id="${n.id}" data-st="${st}" title="${esc(tip)}"${o.d ? ` style="margin-left:${Math.min(o.d, 8) * 8}px"` : ''}>
+    <span class="tile" style="background:${col}"><i data-lucide="${ic}" class="w-5 h-5"></i></span>
+    <div class="min-w-0"><div class="flex items-center gap-1.5"><span class="nm">${esc(n.name)}</span>${route}</div><div class="ef">${n.desc}</div></div>${right}</div>`;
+}
+
+function renderSkills() {
+  const R = G.run, day = S.phase === 'day', all = !!ui().all, adv = advOpen(), groups = ['All', 'Hands', 'Growth', 'Yield', 'Force', 'Machines', 'Pickers', 'Legacy'];
+  const inG = g => NODES.filter(n => g === 'All' || n.grp === g);
+  const nt = nextTarget();
+  let rt = plan ? routeTo(plan.id) : null; if (rt && !rt.ids.length) { plan = null; rt = null; }
+  let bundle = '';
+  if (!day && nt) { const b = bestUpgradeBundle(); if (b.nodes.length) { const py = pyCheck('upgrade', Math.floor(R.money) + '|' + R.nodes.length, b.req, o => o.score === b.score);
+    bundle = `<div class="card2 mb-2"><div class="flex flex-wrap items-center justify-between gap-2"><div class="px text-[13px]" title="Chosen by dynamic programming (a 0/1 knapsack): the most total power (${b.score}) for the money you have.">Best buy right now ${badge(py)}</div><button data-act="bundle" class="btn sm gold">Buy bundle · $${fmt(b.cost)}</button></div><div class="text-[11.5px] opacity-80 mt-1">${b.nodes.map(n => esc(n.name)).join(', ')}</div></div>`; } }
+  const route = rt ? `<div class="card2 mb-2"><div class="px text-[13px] mb-0.5" title="Found with Dijkstra's shortest path over the upgrade dependency graph (${rt.pops} of ${NODES.length + 1} graph nodes visited).">Route to ${esc(NODE[rt.id].name)} ${badge(pyCheck('route', rt.id + '|' + R.nodes.length, rt.req, o => Math.abs(o.dist - rt.cost) <= 1e-6 * Math.max(1, rt.cost)))}</div>
+    <div class="text-[11.5px] opacity-80 mb-1.5">${rt.ids.length} purchase${rt.ids.length > 1 ? 's' : ''}, $${fmt(rt.cost)} in total: ${rt.ids.map(id => esc(NODE[id].name)).join(' → ')}</div>
+    <div class="flex gap-2"><button data-act="buyroute" class="btn sm gold" ${day ? 'disabled' : ''}>Buy as far as I can afford</button><button data-act="clearplan" class="btn sm">Clear</button></div></div>` : '';
+  let body, foot = '';
+  if (!all) {                                                           // default: the next upgrade of each branch, cheapest first, about 8 cards
+    const cand = Object.keys(BR).map(c => CHAIN[c].find(n => !OWN.has(n.id))).filter(n => n && reqOk(n)), sorted = sortBy(cand, n => n.cost), shown = sorted.slice(0, 8);
+    body = shown.length ? `<div class="grid gap-2">${shown.map(n => ucard(n, { adv, rt })).join('')}</div>` : '<div class="note">Everything is bought. Nice work!</div>';
+    if (sorted.length > shown.length) foot = `<div class="text-[11.5px] opacity-70 mt-2">Showing the ${shown.length} cheapest of ${sorted.length}. Use “Show all upgrades” to see the rest.</div>`;
+  } else {
+    let list = inG(filt);
+    if (stat === 'avail') list = list.filter(n => ['buy', 'poor'].includes(NST(n))); else if (stat === 'owned') list = list.filter(n => NST(n) === 'own'); else if (stat === 'locked') list = list.filter(n => NST(n) === 'lock');
+    const [, kf, desc] = SORT_UI[sortK]; list = sortBy(list, kf, !!desc);
+    if (view === 'tree') { const keep = new HashSet(), rows = []; list.forEach(n => keep.add(n.id)); TREE.preorder((id, d) => { if (keep.has(id)) rows.push([NODE[id], d]); }); body = `<div class="grid gap-2">${rows.map(([n, d]) => ucard(n, { d, adv, rt })).join('')}</div>`; }
+    else body = list.length ? `<div class="grid gap-2">${list.map(n => ucard(n, { adv, rt })).join('')}</div>` : '<div class="note">Nothing in this view.</div>';
+  }
+  const advBody = `<div class="flex flex-wrap items-center justify-between gap-2 mb-2"><button data-act="undo" class="btn sm" ${UNDO.size && !day ? '' : 'disabled'}><i data-lucide="undo-2" class="w-3.5 h-3.5"></i> Undo${UNDO.size ? ' (' + UNDO.size + ')' : ''}</button>
+      <div class="seg">${['list:List', 'tree:Tree'].map(s => { const [k, l] = s.split(':'); return `<button data-act="view" data-v="${k}" class="${all && view === k ? 'on' : ''}">${l}</button>`; }).join('')}</div></div>
+    ${bundle}${route}
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2"><div class="seg">${['avail:Available', 'locked:Locked', 'owned:Owned', 'all:All'].map(s => { const [k, l] = s.split(':'); return `<button data-act="stat" data-v="${k}" class="${all && stat === k ? 'on' : ''}">${l}</button>`; }).join('')}</div>
+      <label class="flex items-center gap-1.5 text-xs">Sort <select id="sortSel" data-ui="sortK" class="field text-xs" ${view === 'tree' && all ? 'disabled' : ''}>${Object.entries(SORT_UI).map(([k, v]) => `<option value="${k}" ${sortK === k ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label></div>
+    <div class="flex flex-wrap gap-1.5">${groups.map(g => { const a = inG(g), o = a.filter(n => NST(n) === 'own').length; return `<button data-act="filt" data-v="${g}" class="chip ${all && filt === g ? 'on' : ''}">${g} <span class="opacity-70">${o}/${a.length}</span></button>`; }).join('')}</div>
+    <div class="text-[11.5px] opacity-70 mt-2">Filters, sorting and the tree view work on the full list, so picking one switches to “Show all upgrades”.</div>`;
+  return `${day ? '<div class="note mb-2"><i data-lucide="pause" class="w-3.5 h-3.5"></i> Upgrades are bought between days.</div>' : ''}
+    <div class="flex items-center justify-between gap-2 mb-2"><div class="px text-sm">${R.nodes.length}/100 upgrades</div><button data-act="showall" class="btn sm">${all ? 'Show suggested only' : 'Show all upgrades'}</button></div>
+    ${body}${foot}
+    <details class="sec mt-3" data-sec="adv" ${adv ? 'open' : ''}><summary>Advanced</summary><div class="secb">${advBody}</div></details>`;
+}
+
+function sec(id, title, body, def) { const o = secOpen[id] === undefined ? def : secOpen[id]; return `<details class="sec" data-sec="${id}" ${o ? 'open' : ''}><summary>${title}</summary><div class="secb">${body}</div></details>`; }
+function renderPrestige() {
+  const R = G.run, m = G.meta, cap = FARMS[R.farm].cap, nextT = THR[R.dia], gain = R.dia, post = afterPrestige();
+  const pres = conf.pres ? `<div class="flex gap-2"><button data-act="prestige" class="btn gold grow">Confirm: reset run, bank ${gain} ◆</button><button data-act="cancel" class="btn">Cancel</button></div>`
+    : `<button data-act="prestige" class="btn gold w-full" ${gain < 1 || S.phase === 'day' ? 'disabled' : ''}><i data-lucide="sparkles" class="w-4 h-4"></i> Prestige${gain ? ' (+' + gain + ' ◆)' : ''}</button>`;
+  const card = `<div class="card2 mb-3"><div class="flex items-center justify-between"><div class="px text-sm">This run: ${R.dia}/${cap} ◆</div>${m.dia > 0 ? `<div class="px text-sm gem">${m.dia} ◆ banked</div>` : ''}</div>
+    ${post ? `<div class="flex flex-wrap gap-1.5 my-2">${THR.slice(0, cap).map((t, i) => `<span class="chip ${R.dia > i ? 'on' : ''}">◆${i + 1} · $${fmt(t)}</span>`).join('')}</div>` : '<div class="h-2"></div>'}
+    <div class="bar mb-2"><i style="width:${nextT && R.dia < cap ? Math.min(100, R.moneyRun / nextT * 100) : 100}%"></i></div>
+    <div class="text-xs opacity-80 mb-2">${nextT && R.dia < cap ? `Earn $${fmt(nextT)} in this run for your next diamond. So far: $${fmt(R.moneyRun)}.` : 'This farm\'s diamond cap is reached. Extra days earn nothing, so prestige now.'}</div>
+    ${pres}
+    <div class="text-[11.5px] opacity-70 mt-2">${post ? `Prestige resets money and upgrades. Heirlooms, farms and achievements stay. Seasons so far: ${m.pres}.` : 'Prestige restarts your run. Money and upgrades reset, but the diamonds you earned are yours to keep.'}</div></div>`;
+  if (!post) return card;                                                // before the first prestige: only the progress and the button
+  const heirCard = h => { const own = m.heir.includes(h.id), can = m.dia >= h.cost;
+    return `<button data-act="heir" data-id="${h.id}" class="node ${own ? 'own' : can ? 'buy' : 'poor'}"><span class="flex items-start justify-between gap-2"><span class="px text-[13px]">${h.name}</span><span class="px text-xs gem">${own ? 'Owned' : h.cost + ' ◆'}</span></span><span class="text-[11.5px] opacity-80 block mt-0.5">${h.d}</span></button>`; };
+  const hb = bestHeirBundle(), hpy = hb.ids.length ? pyCheck('heirloom', m.dia + '|' + m.heir.length, hb.req, o => o.score === hb.score) : null;
+  const hbCard = hb.ids.length ? `<div class="card2 mb-3"><div class="flex flex-wrap items-center justify-between gap-2"><div class="px text-[13px]" title="Dynamic programming over the heirloom list (priority ${hb.score}).">Best use of ${m.dia} ◆ ${badge(hpy)}</div><button data-act="heirbundle" class="btn sm gold">Buy bundle · ${hb.cost} ◆</button></div><div class="text-[11.5px] opacity-80 mt-1">${hb.ids.map(id => esc(HEIR[id].name)).join(', ')}</div></div>` : '';
+  const heirBody = hbCard + ['Crops', 'Farms', 'Bonuses'].map(g => `<div class="px text-sm mb-1.5">${g}</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">${HEIRS.filter(h => h.g === g).map(heirCard).join('')}</div>`).join('');
+  const farmNote = { small: 'Where everyone starts.', medium: 'More plots, one more diamond per run.', big: 'A wide field and a four-diamond cap.', storm: 'Rain waters crops for free, but lightning wipes a plot and its neighbours every few seconds.' };
+  const farmBody = `<div class="grid gap-2">${Object.entries(FARMS).map(([id, f]) => { const own = farmOwned(id), cur = R.farm === id, nx = m.pend === id;
+    return `<div class="card2 flex items-center justify-between gap-3"><div class="min-w-0"><div class="px text-[13px]">${f.name} <span class="opacity-60">${f.n}×${f.n}</span></div><div class="text-[11.5px] opacity-80">${farmNote[id]} Cap ${f.cap} ◆.</div></div>
+      ${!own ? `<span class="chip">${HEIR[f.unlock].cost} ◆ in Heirlooms</span>` : cur && nx ? '<span class="chip on">Active</span>' : nx ? '<span class="chip on">Next run</span>' : `<button data-act="farm" data-id="${id}" class="btn sm">${cur ? 'Keep for next run' : 'Use next run'}</button>`}</div>`; }).join('')}</div>`;
+  const sh = poolShares();
+  const seedBody = `<div class="card2">${CROPS.map((c, i) => { const un = !c.unlock || m.heir.includes(c.unlock), sk = m.skip.includes(c.id);
+      return `<div class="flex flex-wrap items-center gap-2 py-1 ${un ? '' : 'opacity-50'}"><span class="swatch" style="background:${c.col}"></span><span class="grow text-[13px]">${c.name}</span><span class="text-[11.5px] opacity-70 w-14 text-right">${c.water} water</span><span class="px text-xs w-12 text-right">$${c.value}</span><span class="text-[11.5px] w-10 text-right">${un ? (sk ? 'off' : Math.round(sh[i] * 100) + '%') : 'locked'}</span>${un ? `<button data-act="skip" data-id="${c.id}" class="btn sm">${sk ? 'Use' : 'Skip'}</button>` : '<span class="w-12"></span>'}</div>`; }).join('')}
+      <div class="text-[11.5px] opacity-70 mt-1.5">Water needed, base sell price, share of new seeds. Skipping a seed removes it from the pool (a BST delete); unlocking adds it back. Radish is a stand-in starter crop; the original's is unknown.</div></div>`;
+  const patches = components(S.fg.adj, v => S.plots[v].crop), big = patches.length ? Math.max(...patches) : 0;
+  const moreBody = `<div class="card2 mb-3"><div class="text-[13px]"><b class="px">${patches.length}</b> crop patches now, largest <b class="px">${big}</b> plots.</div><div class="text-[11.5px] opacity-70 mt-1">Ripe crops of one type that touch pay +4% per connected neighbour, up to +40%. Fewer seed types make bigger patches.</div></div>
+    <div class="card2"><div class="flex flex-wrap gap-1 mb-1">${Array.from({ length: Math.min(12, m.pres) }, () => '<i data-lucide="home" class="w-4 h-4"></i>').join('') || '<span class="text-xs opacity-70">No cottages yet.</span>'}</div><div class="text-[11.5px] opacity-70">One cottage per season. It does nothing, same as reviewers say of the original.</div></div>`;
+  return card + sec('heir', 'Heirlooms', heirBody, true) + sec('farm', 'Farms', farmBody, false) + sec('seeds', 'Seed pool', seedBody, false) + sec('more', 'Patches and village', moreBody, false);
+}
+
+/* ---------- panels: Menu (Stats, Trophies, Settings, Lab) ---------- */
+function sparkline() {
+  const all = HIST.toArray(), a = all.slice(-60), off = all.length - a.length;
+  if (a.length < 2) return '<div class="text-xs opacity-70">Play two days to see your income chart.</div>';
+  const W = 300, H = 80, pad = 6, mx = Math.max(...a, 1), X = i => pad + i / (a.length - 1) * (W - 2 * pad), Y = v => H - pad - v / mx * (H - 2 * pad);
+  const pts = a.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' '), best = maxSubD(a.slice(1).map((v, i) => v - a[i]));
+  const band = best.sum > 0 ? `<rect x="${X(best.lo).toFixed(1)}" y="0" width="${(X(best.hi + 1) - X(best.lo)).toFixed(1)}" height="${H}" fill="var(--gold-soft)"/>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" class="w-full" role="img" aria-label="Income per day">${band}<polygon points="${pad},${H - pad} ${pts} ${X(a.length - 1).toFixed(1)},${H - pad}" fill="var(--leaf-soft)"/><polyline points="${pts}" fill="none" stroke="var(--leaf)" stroke-width="2" stroke-linejoin="round"/><circle cx="${X(a.length - 1).toFixed(1)}" cy="${Y(a[a.length - 1]).toFixed(1)}" r="3.5" fill="var(--leaf)"/></svg>
+    <div class="text-[11.5px] opacity-80">${best.sum > 0 ? `Strongest growth streak (divide and conquer): days ${off + best.lo + 2} to ${off + best.hi + 2}, +$${fmt(best.sum)} per day gained.` : 'No growth streak yet.'}</div>`;
+}
+function renderStats() {
+  const L = G.meta.life, m = G.meta;
+  const kv = [['Day', G.run.day], ['Money this run', '$' + fmt(G.run.moneyRun)], ['Best day', '$' + fmt(L.bestDay)], ['Crops (run)', fmt(G.run.harvRun)], ['Crops (lifetime)', fmt(L.harv)], ['Respawns', fmt(L.resp)], ['Machine waterings', fmt(L.auto)], ['Seasons', m.pres], ['Diamonds earned', L.diaEarn], ['Days played', L.days]];
+  return `<div class="grid grid-cols-2 gap-2 mb-3">${kv.map(([k, v]) => `<div class="card2"><div class="text-[11px] opacity-70">${k}</div><div class="px text-sm">${v}</div></div>`).join('')}</div>
+    <div class="px text-sm mb-1.5">Income per day</div><div class="card2">${sparkline()}</div>`;
+}
+function renderTrophies() {
+  const m = G.meta;
+  return `<div class="px text-sm mb-1.5">Achievements ${m.ach.length}/50</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">${ACH.map(a => { const got = ACHS.has(a.id);
+    return `<div class="ach ${got ? 'got' : ''}"><i data-lucide="${got ? 'trophy' : 'lock'}" class="w-3.5 h-3.5 shrink-0"></i><div class="min-w-0"><div class="px text-[12.5px]">${got || !a.hidden ? a.name : '???'}</div><div class="text-[11px] opacity-75 leading-snug">${got || !a.hidden ? a.desc : 'Hidden achievement'}</div></div></div>`; }).join('')}</div>`;
+}
+function renderSettings() {
+  const set = G.meta.set;
+  return `<div class="card2 mb-3 grid gap-2.5 text-[13px]">
+      <label class="flex items-center gap-3"><span class="w-16">Music</span> <input type="range" id="set-music" data-set="music" min="0" max="1" step=".05" value="${set.music}" class="grow" aria-label="Music volume"></label>
+      <label class="flex items-center gap-3"><span class="w-16">Sound</span> <input type="range" id="set-sfx" data-set="sfx" min="0" max="1" step=".05" value="${set.sfx}" class="grow" aria-label="Sound effects volume"></label>
+      <label class="flex items-center gap-3"><input type="checkbox" id="set-mute" data-set="mute" ${set.mute ? 'checked' : ''}> Mute everything</label>
+      <label class="flex items-center gap-3"><span class="w-16">FPS limit</span> <select id="set-fps" data-set="fps" class="grow field">${[30, 60, 120, 0].map(f => `<option value="${f}" ${set.fps === f ? 'selected' : ''}>${f || 'Uncapped'}</option>`).join('')}</select></label>
+      <label class="flex items-center gap-3"><input type="checkbox" id="set-smooth" data-set="smooth" ${set.smooth ? 'checked' : ''}> Smooth the ring cursor</label>
+      <label class="flex items-center gap-3"><input type="checkbox" id="set-auto" data-set="auto" ${set.auto ? 'checked' : ''}> Start next day automatically</label>
+      <label class="flex items-center gap-3"><input type="checkbox" id="set-greedy" data-set="greedy" ${set.greedy ? 'checked' : ''}> Auto-buy cheapest upgrades</label>
+      <button data-act="replay" class="btn sm"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Replay tutorial</button>
+      ${conf.reset ? '<div class="flex gap-2"><button data-act="reset" class="btn bad grow">Erase everything</button><button data-act="cancel" class="btn">Cancel</button></div>' : '<button data-act="reset" class="btn sm">Reset save…</button>'}</div>`;
+}
+
+/* ---------- Lab: the data structures and algorithms behind the game ---------- */
+const kvt = rows => `<table class="w-full text-[12.5px]"><tbody>${rows.map(r => `<tr class="border-b border-dashed" style="border-color:var(--line)">${r.map((c, i) => `<td class="py-1 ${i ? 'px text-right pl-2' : ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+const lcard = (title, tag, body) => `<div class="card2 mb-3"><div class="flex flex-wrap items-baseline justify-between gap-x-2 mb-1.5"><div class="px text-sm">${title}</div><div class="text-[11px] opacity-70">${tag}</div></div>${body}</div>`;
+function labData(n, pat) { const a = Array.from({ length: n }, () => (Math.random() * 1e5) | 0); if (pat === 'sorted') a.sort((x, y) => x - y); else if (pat === 'reversed') a.sort((x, y) => y - x); return a; }
+function labSortRun() { const data = labData(lab.n, lab.pat); return Object.keys(SORTS).map(k => { const r = runSort(k, data); return { name: SORTS[k].name, big: SORTS[k].big, cmp: r.cmp, mv: r.mv, ms: r.ms, ok: r.arr.every((x, i) => !i || r.arr[i - 1] <= x) }; }); }
+const CONCEPTS = [
+  ['Python OOP + Big O + Stacks', 'py.py: abstract Planner, Knapsack, RoutePlanner, TreeAnalyzer, Stack. JS: Stack in ds.js. Big O labels on this tab'],
+  ['Queues and deques', 'ds.js Deque/Queue. S.fx (bounded), S.rate (sliding window), tractor row queue, toast queue, particle pool (v3)'],
+  ['Arrays, 2D lists, memory', 'S.grid (list of rows), S.vis and farm matrix (typed arrays), HIST (DynArray, doubling)'],
+  ['Trees and traversals', 'SkillTree: DFS pre-order (Stack), BFS level order (Queue), post-order subtree totals'],
+  ['BST and node mutation', 'S.seeds: BST insert on unlock, delete on skip, setWeight on upgrades, weighted sampling'],
+  ['Hash tables', 'HashTable/HashSet (OWN, ACHS, memo caches): chaining, FNV-1a, rehash at load 0.75'],
+  ['Graphs, DFS and BFS', 'gridGraph (list + matrix), bfsCount patch bonus, components() DFS, lightning via matrix'],
+  ['Sorting', 'SORTS (five), sortBy for upgrade cards, day results, plot draw order; race on this tab'],
+  ['Searching', 'upperBound on prices and diamond thresholds; linear vs binary race on this tab'],
+  ['Dijkstra and greedy', 'routeTo (skill graph), moleDig (farm graph), bestSpot drone, autoBuy min-heap'],
+  ['DP, memoization, divide and conquer', 'knapsackDP bundles, knapsackMemo, TREE.costTo memo, maxSubD streak, merge/quick sort'],
+];
+let labSrc = 'p = Knapsack()\nprint(p.report({"items": game["heirloom_items"], "cap": game["diamonds"]}))\ns = Stack()\nfor n in game["nodes_owned"]: s.push(n)\nprint(len(s), "owned upgrades on a stack; top:", s.pop() if len(s) else None)';
+function renderLab() {
+  if (!lab.sort) lab.sort = labSortRun();
+  const mxc = Math.max(...lab.sort.map(r => r.cmp), 1);
+  const sortBody = `<div class="flex flex-wrap items-center gap-2 mb-2 text-xs"><label>Items <select id="lab-n" data-lab="n" class="field">${[50, 200, 800].map(n => `<option ${lab.n === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label>Order <select id="lab-pat" data-lab="pat" class="field">${['random', 'sorted', 'reversed'].map(p => `<option ${lab.pat === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label><button data-act="labsort" class="btn sm">Run again</button></div>
+    <table class="w-full text-[12px]"><thead><tr class="text-left opacity-70"><th>Sort</th><th class="text-right">Compares</th><th class="text-right">Writes</th><th class="text-right">ms</th></tr></thead><tbody>${lab.sort.map(r => `<tr><td class="py-1">${r.name} <span class="opacity-60">${r.big}</span>${r.ok ? '' : ' (FAILED)'}<div class="bar mt-0.5"><i style="width:${r.cmp / mxc * 100}%"></i></div></td><td class="px text-right align-top pt-1">${r.cmp.toLocaleString()}</td><td class="px text-right align-top pt-1">${r.mv.toLocaleString()}</td><td class="px text-right align-top pt-1">${r.ms.toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
+  const target = COST[lab.idx], ls = linearSearch(COST, target), bs = binarySearch(COST, target), ub = upperBound(COST, G.run.money);
+  const searchBody = `<label class="flex items-center gap-2 text-xs mb-2">Look up price #${lab.idx + 1} ($${fmt(target)}) <input type="range" id="lab-idx" data-lab="idx" min="0" max="99" value="${lab.idx}" class="grow"></label>
+    ${kvt([['Linear search, O(n)', ls.cmp + ' compares'], ['Binary search, O(log n)', bs.cmp + ' compares'], ['Your money covers', ub.idx + ' price tiers (' + ub.cmp + ' compares)']])}`;
+  const demo = new HashTable(); NODES.forEach(n => demo.set(n.id, 1)); const hs = demo.stats(), os = OWN.t.stats();
+  const hashBody = kvt([['Owned-upgrade set now', os.entries + ' keys, ' + os.buckets + ' buckets, load ' + os.load.toFixed(2)], ['Collisions / rehashes (owned)', os.collisions + ' / ' + os.rehashes], ['All 100 upgrade ids inserted', hs.entries + ' keys, ' + hs.buckets + ' buckets'], ['Collisions, rehashes, longest chain', hs.collisions + ', ' + hs.rehashes + ', ' + hs.longest], ['Average lookup probes', (hs.probes / Math.max(1, hs.entries)).toFixed(2)]]);
+  const lev = TREE.levelOrder(), maxD = Math.max(...lev.map(x => x[1])), top = sortBy(TREE.roots.map(r => ({ id: r, ...TREE.subtree(r) })), x => x.n, true).slice(0, 3), pre = [];
+  TREE.preorder(id => pre.push(id)); const tpy = pyCheck('tree', 'v1', { roots: TREE.roots, kids: TREE.kids }, o => o.order.join() === pre.join());
+  const treeBody = kvt([['Chains (roots) / nodes', TREE.roots.length + ' / ' + lev.length], ['Deepest level (BFS)', maxD], ['Largest chains (post-order)', top.map(t => esc(NODE[t.id].name) + ' ' + t.n).join(', ')], ['Path-cost memo', TREE.hits + ' hits of ' + TREE.calls + ' calls']]) + `<div class="mt-1">${badge(tpy)} <span class="text-[11.5px] opacity-70">Python iterative DFS with a Stack gives the same pre-order.</span></div>`;
+  const rows = []; S.seeds.inorder((k, v, w) => rows.push(`${CROPS[v].name} (${k} water, weight ${w.toFixed(1)})`));
+  const bstBody = kvt([['Seed pool, in order', rows.join('; ')], ['Nodes / height', S.seeds.size + ' / ' + S.seeds.height()], ['Mutations so far', SEEDOPS.ins + ' inserts, ' + SEEDOPS.del + ' deletes, ' + SEEDOPS.upd + ' reweights'], ['Crops needing 4 to 12 water', S.seeds.range(4, 12).join(', ') || 'none']]);
+  const fg = S.fg, d0 = bfsDist(fg.adj, 0), comps = components(fg.adj, v => S.plots[v].crop);
+  const graphBody = kvt([['Farm graph', fg.V + ' vertices, ' + fg.E + ' edges'], ['Adjacency list', '~' + fg.E * 2 * 4 + ' bytes, O(V+E)'], ['Adjacency matrix', fg.mat.byteLength + ' bytes, O(V²), O(1) edge test'], ['BFS steps corner to corner', d0[fg.V - 1]], ['DFS crop patches', comps.length + ', largest ' + (comps.length ? Math.max(...comps) : 0)], ['Grid cells touched vs full scans', PERF.naive ? (PERF.box / PERF.naive * 100).toFixed(1) + '% (bounding box)' : 'n/a']]);
+  const u = upgradeItems(), kd = knapsackDP(u.items, u.cap), km = knapsackMemo(u.items, u.cap), lr = plan ? routeTo(plan.id) : null;
+  const dpBody = kvt([['Bundle items, capacity', u.items.length + ' items, ' + u.cap + ' units (1 unit = $' + fmt(u.unit) + ')'], ['Bottom-up table cells', kd.cells + ', O(n·W)'], ['Top-down memo states', km.states + ' from ' + km.calls + ' calls'], ['Both agree', kd.score === km.score ? 'yes, score ' + kd.score : 'NO'], ['Last route (Dijkstra)', lr ? lr.pops + ' pops for ' + lr.ids.length + ' steps' : 'plan a route in Upgrades > Advanced']]);
+  const qBody = kvt([['Floating-text deque', S.fx.size + ' of max ' + S.fx.max + ', capacity ' + S.fx.capacity + ', grew ' + S.fx.grows + 'x'], ['Particle pool (stack + deque)', FX.size + ' + ' + COIN.size + ' live of ' + (FX.cap + COIN.cap) + ', ' + FX.free.size + ' free'], ['Income window (5 s)', S.rate.size + ' entries'], ['Tractor row queue', S.tr.q.size + ' rows waiting'], ['Toast queue', TQ.size + ' waiting'], ['Undo stack', UNDO.size + ' purchases']]);
+  const arrBody = kvt([['Day history (dynamic array)', HIST.length + ' used of ' + HIST.capacity + ', ' + HIST.resizes + ' doublings, ' + HIST.copies + ' copies'], ['Typed arrays', 'visited ' + S.vis.byteLength + ' B, matrix ' + fg.mat.byteLength + ' B, history ' + HIST.bytes + ' B'], ['Plots', 'list of ' + S.grid.length + ' rows × ' + S.grid[0].length + ', index = row × ' + S.n + ' + column']]);
+  const pyLab = `<div class="card2 mb-3"><div class="px text-sm mb-1">Python lab</div><div class="text-[11.5px] opacity-80 mb-1.5">${esc(PY.note)}. Code runs in Pyodide. You get a <code>game</code> dict and the planner classes <code>Stack</code>, <code>Knapsack</code>, <code>RoutePlanner</code>, <code>TreeAnalyzer</code>.</div>
+      <textarea id="labCode" class="field w-full font-mono text-xs" rows="5" spellcheck="false" aria-label="Python code">${esc(labSrc)}</textarea>
+      <button data-act="lab" class="btn sm mt-1.5">Run Python</button><pre id="labOut" class="out"></pre></div>`;
+  return `<div class="note mb-3"><i data-lucide="flask-conical" class="w-3.5 h-3.5"></i> Live view of the data structures and algorithms the game runs on.</div>${pyLab}
+    ${lcard('Sorting race', 'bubble, insertion, selection, quick, merge', sortBody)}${lcard('Searching', 'linear vs binary', searchBody)}${lcard('Hash table', 'chaining, FNV-1a, rehash', hashBody)}
+    ${lcard('Skill tree', 'DFS, BFS, post-order, memoisation', treeBody)}${lcard('Seed pool BST', 'insert, delete, reweight, sample', bstBody)}${lcard('Farm graph', 'list vs matrix, BFS, DFS', graphBody)}
+    ${lcard('Dynamic programming and Dijkstra', 'knapsack, shortest route', dpBody)}${lcard('Queues, deques, stacks', 'FIFO, sliding window, LIFO', qBody)}${lcard('Arrays and memory', 'static, dynamic, 2D', arrBody)}
+    ${lcard('Where each concept lives', 'concept map', kvt(CONCEPTS.map(([a, b]) => [a, `<span class="text-[11.5px] opacity-80 font-sans">${esc(b)}</span>`])))}`;
+}
+function renderMenu() {
+  const segs = [['stats', 'Stats'], ['trophies', 'Trophies'], ['settings', 'Settings'], ['lab', 'Lab']];
+  const back = prestigeUnlocked() ? '' : '<button class="btn sm mb-2" data-act="back"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> Back to upgrades</button>';
+  const body = { stats: renderStats, trophies: renderTrophies, settings: renderSettings, lab: renderLab }[menuSec]();
+  return `${back}<div class="seg mb-3" role="group" aria-label="Menu sections">${segs.map(([k, l]) => `<button data-act="msec" data-v="${k}" class="${menuSec === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`;
+}
+
+/* ---------- panel shell: tab bar (hidden until a second tab unlocks) + body ---------- */
+const RENDER = { skills: renderSkills, prestige: renderPrestige, menu: renderMenu };
+function renderNav() {
+  const nav = $('#tabsNav'), show = prestigeUnlocked(); nav.hidden = !show; if (!show) return;
+  nav.innerHTML = [['skills', 'sprout', 'Upgrades'], ['prestige', 'sparkles', 'Prestige'], ['menu', 'settings', '']].map(([id, ic, lb]) =>
+    `<button class="tab ${id === 'menu' ? 'icon ' : ''}${tab === id ? 'on' : ''}" data-tab="${id}" ${tab === id ? 'aria-current="page"' : ''} ${id === 'menu' ? 'aria-label="Menu" title="Menu"' : ''}><i data-lucide="${ic}" class="w-4 h-4"></i>${lb}${id === 'prestige' && !ui().seen.t_prestige ? '<span class="dot"></span><span class="sr">new</span>' : ''}</button>`).join('');
+}
+function renderPanel() {
+  if (tab === 'prestige' && !prestigeUnlocked()) tab = 'skills';
+  if (tab === 'prestige') markSeen('t_prestige');                       // opening Prestige clears its "new" dot
+  const body = $('#panelBody'), fa = document.activeElement, inBody = fa && fa.closest && fa.closest('#panelBody');
+  const fk = inBody ? [fa.id, fa.dataset.act, fa.dataset.id, fa.dataset.v, fa.dataset.set, fa.dataset.sec].join('|') : null;
+  const keep = body.scrollTop; body.innerHTML = RENDER[tab](); body.scrollTop = keep;
+  renderNav(); icons();
+  $('#chkAuto').checked = !!G.meta.set.auto; $('#chkGreedy').checked = !!G.meta.set.greedy;
+  if (fk && fk !== '|||||') for (const el of body.querySelectorAll('button,input,select,summary')) if ([el.id, el.dataset.act, el.dataset.id, el.dataset.v, el.dataset.set, el.dataset.sec].join('|') === fk) { el.focus({ preventScroll: true }); break; }
+}
+
+/* ---------- HUD, Next-goal strip, sun arc ---------- */
+const hc = {};
+function setT(id, v) { if (hc[id] !== v) { hc[id] = v; $(id).textContent = v; } }
+function setH(id, h) { const k = id + '#h'; if (hc[k] !== h) { hc[k] = h; $(id).hidden = h; } }
+function setW(el, k, w) { if (hc[k] !== w) { hc[k] = w; el.style.width = w + '%'; } }
+function muteUI() {
+  const m = !!G.meta.set.mute; if (hc.mute === m) return; hc.mute = m; const b = $('#btnMute');
+  b.innerHTML = `<i data-lucide="${m ? 'volume-x' : 'volume-2'}" class="w-5 h-5"></i>`; b.setAttribute('aria-pressed', m ? 'true' : 'false'); b.setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound'); icons();
+}
+function sunUpdate() {
+  const u = dayU(), x = (1 - u) * (1 - u) * 10 + 2 * (1 - u) * u * 100 + u * u * 190, y = (1 - u) * (1 - u) * 40 + 2 * (1 - u) * u * -34 + u * u * 40;
+  const k = x.toFixed(1) + ',' + y.toFixed(1) + (u > .85 ? 'o' : 'y'); if (hc.sun === k) return; hc.sun = k;
+  const d = $('#sunDot'); d.setAttribute('cx', x.toFixed(1)); d.setAttribute('cy', y.toFixed(1)); d.setAttribute('fill', u > .85 ? '#ff9a4a' : '#ffc83a');
+}
+function hud() {
+  const R = G.run, f = FARMS[R.farm], day = S.phase === 'day', L = G.meta.life;
+  setT('#hMoney', '$' + fmt(shownMoney)); setT('#hDay', String(R.day));
+  const dg = prestigeUnlocked(); setH('#chipDia', !dg);
+  if (dg) { const nx = THR[R.dia]; setT('#hDia', `◆ ${R.dia}/${f.cap}`); setT('#hDiaNext', nx && R.dia < f.cap ? '$' + fmt(nx) : 'max'); setW($('#hDiaBar'), 'diaBar', nx && R.dia < f.cap ? Math.min(100, R.moneyRun / nx * 100).toFixed(1) : 100); }
+  setT('#hTime', day ? Math.ceil(S.t) + 's' : '30s'); sunUpdate();
+  setT('#hSpeed', (G.meta.set.speed || 1) + '×'); setT('#hRate', day ? '$' + fmt(incomeRate()) + '/s' : '$0/s');
+  setH('#hint', !(L.days < 3 && G.meta.pres === 0)); setH('#stageOpts', L.days < 2 && G.meta.pres === 0);
+  const showOv = S.phase !== 'day' && $('#modal').hidden || S.paused; setH('#overlay', !showOv);
+  if (showOv) setT('#ovLabel', S.paused ? 'Paused. Click to resume' : `Play day ${R.day}`);
+  muteUI();
+}
+const goalHTML = () => `<button class="goal" type="button" aria-label="Next upgrade goal. Opens the upgrades panel"><span class="gic"><i data-lucide="target" class="w-4 h-4"></i></span><span class="gl"><span class="gt"><span class="gn">Next: …</span><span class="gp px"></span></span><span class="gbar"><i></i></span></span></button>`;
+const GL = { t: 0, nt: null, key: '', aff: false };
+function goalUpdate(now) {
+  if (now - GL.t > 150) { GL.t = now; GL.nt = nextTarget(); }
+  const nt = GL.nt, money = G.run.money, aff = !!nt && money >= nt.cost, w = nt ? Math.min(100, money / nt.cost * 100) : 100;
+  const key = (nt ? nt.id : '-') + '|' + aff + '|' + w.toFixed(1);
+  if (key !== GL.key) {
+    GL.key = key;
+    for (const el of document.querySelectorAll('.goal')) {
+      el.querySelector('.gn').textContent = nt ? 'Next: ' + nt.name : 'All upgrades bought'; el.querySelector('.gp').textContent = nt ? '$' + fmt(nt.cost) : '';
+      el.querySelector('.gbar i').style.width = w.toFixed(1) + '%'; el.classList.toggle('aff', aff);
+    }
+  }
+  if (aff && !GL.aff && !RM.matches) for (const el of document.querySelectorAll('.goal')) { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 1300); }   // pulses once when it becomes affordable
+  GL.aff = aff;
+}
+function sheet(open) { const p = $('#panel'), h = $('#sheetHandle'); p.classList.toggle('open', open); h.setAttribute('aria-expanded', open ? 'true' : 'false'); h.setAttribute('aria-label', open ? 'Collapse panel' : 'Expand panel'); }
+function openUpgrades(hi) {
+  tab = 'skills'; conf = {}; if (hi) { const nt = nextTarget(); hl = nt ? nt.id : null; }
+  if (MOBILE.matches) sheet(true); renderPanel();
+  if (hl) { const el = $('#panelBody .ucard[data-id="' + hl + '"]'); if (el) el.scrollIntoView({ block: 'nearest', behavior: RM.matches ? 'auto' : 'smooth' }); const id = hl; setTimeout(() => { if (hl === id) hl = null; const e2 = $('#panelBody .ucard[data-id="' + id + '"]'); if (e2) e2.classList.remove('hl'); }, 1800); }
+}
+
+/* ---------- first-run coach: one small bubble at a time; each tip is shown once (meta.ui.seen) ---------- */
+const COACHB = { water: 0, harv: 0, nodes: 0 };            // baselines, so "Replay tutorial" can ask for the actions again
+const COACH = { tip: null, since: 0, t: 0 };
+const lf = () => G.meta.life;
+const anEl = (el, side) => { if (!el) return null; const r = el.getBoundingClientRect(); return r.width || r.height ? { x: r.left + r.width / 2, top: r.top, bottom: r.bottom, side } : null; };
+const anStage = () => { const r = cv.getBoundingClientRect(), y = r.top + OY + S.n * TH * .3; return { x: r.left + OX, top: y, bottom: y }; };
+const TIPS = [
+  { id: 'c_water', when: () => S.phase === 'day' && lf().water === COACHB.water, done: () => lf().water > COACHB.water, at: anStage, text: 'Move the ring over crops to water them.' },
+  { id: 'c_harvest', when: () => S.phase === 'day' && ui().seen.c_water && lf().harv === COACHB.harv, done: () => lf().harv > COACHB.harv,
+    at: () => { const p = S.plots.find(q => q.ripe); if (!p) return anStage(); const r = cv.getBoundingClientRect(); const y = r.top + OY + (p.i + p.j + 1) * TH / 2 - 24 * SC; return { x: r.left + OX + (p.i - p.j) * TW / 2, top: y, bottom: y + 30 * SC }; }, text: 'Touch ripe crops to harvest them.' },
+  { id: 'c_buy', when: () => { const nt = nextTarget(); return S.phase !== 'day' && $('#modal').hidden && ui().seen.c_harvest && G.run.nodes.length === COACHB.nodes && !!nt && G.run.money >= nt.cost; }, done: () => G.run.nodes.length > COACHB.nodes,
+    at: () => anEl($('#panelBody .ucard.buy .btn')) || anEl($('.goal-d .goal')) || anEl($('.goal-m .goal')), text: 'Spend your money on an upgrade.' },
+  { id: 'c_machine', when: () => lf().mach.length > 0 && S.phase === 'day', ms: 9000, at: anStage, text: 'Machines work on their own. Some even harvest while you play.' },
+  { id: 'c_prestige', when: () => prestigeUnlocked() && !$('#tabsNav').hidden, ms: 10000, at: () => (MOBILE.matches && !$('#panel').classList.contains('open')) ? anEl($('#sheetHandle')) : anEl($('[data-tab="prestige"]'), 'bottom'), text: 'Prestige is unlocked! Turn your run into permanent bonuses.' },
+  { id: 'c_dia', when: () => (G.run.dia > 0 || G.meta.dia > 0) && !$('#chipDia').hidden, ms: 9000, at: () => anEl($('#chipDia'), 'bottom'), text: 'Your first diamond! Prestige turns diamonds into permanent unlocks.' },
+  { id: 'c_storm', when: () => G.run.farm === 'storm' && S.phase === 'day', ms: 9000, at: anStage, text: 'Storm Farm: lightning wipes a plot and its neighbours. Watch for the red circle.' },
+];
+function placeCoach(a) {
+  const el = $('#coach'), w = el.offsetWidth, h = el.offsetHeight, m = 8; let side = a.side === 'bottom' ? 'bottom' : 'top', y = side === 'top' ? a.top - h - 12 : a.bottom + 12;
+  if (side === 'top' && y < m) { side = 'bottom'; y = a.bottom + 12; } else if (side === 'bottom' && y + h > innerHeight - m) { side = 'top'; y = a.top - h - 12; }
+  y = Math.max(m, Math.min(innerHeight - m - h, y));
+  const x = Math.max(m, Math.min(innerWidth - w - m, a.x - w / 2));
+  el.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`; el.dataset.side = side; el.style.setProperty('--ax', Math.max(14, Math.min(w - 14, a.x - x)).toFixed(0) + 'px');
+}
+function coachHide() { COACH.tip = null; $('#coach').classList.remove('on'); }
+function coachTick(now) {
+  if (document.hidden) return;
+  const busy = !$('#modal').hidden;
+  if (COACH.tip) {
+    const tp = COACH.tip;
+    if ((tp.done && tp.done()) || (tp.ms && now - COACH.since > tp.ms)) { markSeen(tp.id); coachHide(); }
+    else if (busy || !tp.when()) coachHide();
+    else { const a = tp.at() || anStage(); placeCoach(a); }
+  } else if (!busy && now - COACH.t > 250) {
+    COACH.t = now;
+    for (const tp of TIPS) if (!ui().seen[tp.id] && tp.when()) {
+      if (tp.done && tp.done()) { markSeen(tp.id); continue; }
+      COACH.tip = tp; COACH.since = now; $('#coachTx').textContent = tp.text; $('#coach').classList.add('on'); placeCoach(tp.at() || anStage()); break;
+    }
+  }
+}
+function replayTips() {
+  TIPS.forEach(t => { delete ui().seen[t.id]; }); COACHB.water = lf().water; COACHB.harv = lf().harv; COACHB.nodes = G.run.nodes.length; coachHide(); save();
+}
+
+/* ---------- toasts, day-end modal ---------- */
+const TQ = new Queue(); let toastLive = 0;            // FIFO: toasts show in the order they were raised, three at a time
+function pumpToasts() {
+  while (toastLive < 3 && TQ.size) {
+    const html = TQ.dequeue(), d = document.createElement('div'); d.className = 'toast'; d.innerHTML = html; $('#toasts').appendChild(d); toastLive++; icons();
+    setTimeout(() => { d.remove(); toastLive--; pumpToasts(); }, 3200);
+  }
+}
+function toast(html) { TQ.enqueue(html); pumpToasts(); }
+HOOK.ach = a => { toast(`<i data-lucide="trophy" class="w-4 h-4"></i><div><div class="px text-sm">${esc(a.name)}</div><div class="text-[11.5px] opacity-80">${esc(a.desc)}</div></div>`); AUD.sfx('ach'); if (tab === 'menu' && menuSec === 'trophies') renderPanel(); };
+HOOK.dia = d => { toast(`<i data-lucide="gem" class="w-4 h-4"></i><div class="px text-sm">Diamond ${d} reached</div>`); AUD.sfx('dia'); };
+HOOK.dayEnd = res => { AUD.sfx('dayEnd'); AUD.duck(true); showResults(res); renderPanel(); hud(); };
+let RV = 0, CURRES = null;
+const cancelReveal = () => { if (RV) { cancelAnimationFrame(RV); RV = 0; } };
+function finishReveal(res) {
+  document.querySelectorAll('#modalBody .rowrv').forEach(r => r.classList.add('in'));
+  document.querySelectorAll('#modalBody .cu').forEach((c, i) => { c.textContent = '$' + fmt(res.lines[i].earn); });
+  const t = $('#mTotal'); if (t) { t.classList.add('in'); $('#mTotalN').textContent = fmt(res.earn); } const s = $('#mStamp'); if (s) s.hidden = false;
+}
+function revealResults(res) {                           // rows appear one by one with a count-up, then the total pops, then the stamp
+  cancelReveal();
+  const rows = [...document.querySelectorAll('#modalBody .rowrv')], cu = [...document.querySelectorAll('#modalBody .cu')], tot = $('#mTotal'), totN = $('#mTotalN'), stamp = $('#mStamp');
+  if (RM.matches) { finishReveal(res); return; }
+  const t0 = performance.now(), STEP = 300, DUR = 380, tEnd = rows.length * STEP + DUR; let totalShown = false, stampShown = false;
+  const ease = k => 1 - Math.pow(1 - k, 3);
+  const loop = now => {
+    const el = now - t0;
+    rows.forEach((r, i) => { const s = el - i * STEP; if (s < 0) return; if (!r.classList.contains('in')) { r.classList.add('in'); AUD.sfx('tally', i); } cu[i].textContent = '$' + fmt(res.lines[i].earn * ease(Math.min(1, s / DUR))); });
+    if (el >= tEnd) {
+      if (!totalShown) { totalShown = true; tot.classList.add('in'); AUD.sfx('total'); }
+      const k = Math.min(1, (el - tEnd) / 450); totN.textContent = fmt(res.earn * ease(k));
+      if (k >= 1 && stamp && !stampShown) { stampShown = true; stamp.hidden = false; AUD.sfx('best'); }
+      if (k >= 1 && (!stamp || stampShown)) { RV = 0; return; }
+    }
+    RV = requestAnimationFrame(loop);
+  };
+  RV = requestAnimationFrame(loop);
+}
+function showResults(res) {
+  CURRES = res;
+  const best = res.earn > res.prevBest && G.meta.life.days > 1 && res.earn > 0;
+  const rows = res.lines.map(l => `<tr class="rowrv"><td>${SRCN[l.src] || l.src}</td><td class="r">${l.count ? l.count + ' crops' : ''}</td><td class="r px"><span class="cu">$0</span></td></tr>`).join('') || '<tr><td colspan="3" class="opacity-70">No harvests today. Move the ring over the crops.</td></tr>';
+  const crews = Object.entries(res.harv).map(([k, v]) => `${HARVN[k]} ${v}`).join(' · ') || 'none';
+  const nt = nextTarget();
+  $('#modalBody').innerHTML = `<div class="px text-lg mb-1">Day ${res.day} complete</div>
+    <table class="w-full text-sm mb-2"><tbody>${rows}</tbody></table>
+    <div class="flex items-center mb-2"><span class="px text-sm opacity-70 mr-2">Total</span><span class="px text-2xl tot" id="mTotal" style="color:var(--gold)">+$<span id="mTotalN">0</span></span>${best ? '<span class="stamp" id="mStamp" hidden>New best!</span>' : ''}</div>
+    <div class="text-[11.5px] opacity-80 mb-1">Harvested by: ${crews}</div>
+    ${res.patch > .5 ? `<div class="text-[11.5px] opacity-80 mb-2">Patch bonus included in the totals: +$${fmt(res.patch)}</div>` : '<div class="mb-2"></div>'}
+    ${res.auto && res.auto.length ? `<div class="note mb-3"><i data-lucide="zap" class="w-3.5 h-3.5"></i> Auto-bought: ${res.auto.map(esc).join(', ')}</div>` : ''}
+    ${nt ? `<div class="note mb-3"><i data-lucide="target" class="w-3.5 h-3.5"></i> Next: <b>${esc(nt.name)}</b> costs $${fmt(nt.cost)}${G.run.money >= nt.cost ? ' (you can afford it)' : ', you have $' + fmt(G.run.money)}</div>` : ''}
+    ${G.run.dia >= FARMS[G.run.farm].cap ? '<div class="note mb-3 gold-note"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Diamond cap reached. More days add nothing; prestige from the Prestige tab.</div>' : ''}
+    <div class="flex gap-2"><button id="mUp" class="btn grow"><i data-lucide="sprout" class="w-4 h-4"></i> Upgrades</button><button id="mNext" class="btn go grow"><i data-lucide="play" class="w-4 h-4"></i> Next day</button></div>`;
+  $('#modal').hidden = false; icons(); revealResults(res);
+  setTimeout(() => { const b = $('#mNext'); if (b && !$('#modal').hidden) b.focus({ preventScroll: true }); }, 0);
+  clearTimeout(autoT);
+  if (G.meta.set.auto) autoT = setTimeout(() => { if (S.phase === 'results' && !$('#modal').hidden) { closeModal(); startDay(); } }, 2600 + res.lines.length * 300 + 800);
+}
+const closeModal = () => { clearTimeout(autoT); cancelReveal(); if (!$('#modal').hidden) { $('#modal').hidden = true; AUD.duck(false); } };
+
+/* ---------- Pyodide (Python economy) ---------- */
+const PY_TIMEOUT = 25000;
+async function bootPython() {
+  try {
+    if (typeof loadPyodide !== 'function') throw new Error('Pyodide script did not load');
+    const py = await Promise.race([loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/npm/pyodide@0.26.4/' }), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), PY_TIMEOUT))]);
+    py.runPython(PY_SRC);
+    const costs = py.globals.get('build_costs')().toJs(), jsCosts = Econ.costs();
+    const bad = costs.length !== 100 ? 100 : costs.filter((c, i) => Math.abs(c - jsCosts[i]) > 1e-9 * Math.max(1, c)).length;
+    if (bad) throw new Error(bad + ' cost mismatches');
+    const settle = py.globals.get('settle_day'), dfor = py.globals.get('diamonds_for'), js = Econ.settleDay;
+    Econ.settleDay = d => { try { return JSON.parse(settle(JSON.stringify(d))); } catch (e) { return js(d); } };
+    PYF = { dfor }; PY.py = py; PY.ready = true; PY.note = 'Python: ready, 100 node costs verified';
+  } catch (e) { PY.note = 'Python: unavailable here (' + String(e.message || e).slice(0, 60) + '), using the JavaScript copy of the same economy'; }
+  hud(); renderPanel();
+}
+async function runLab() {
+  const out = $('#labOut'); if (!out) return;
+  if (!PY.ready) { out.textContent = 'Python is not loaded in this view, so the lab is off. The game itself still runs on the JavaScript economy.'; return; }
+  const buf = []; PY.py.setStdout({ batched: s => buf.push(s) }); PY.py.setStderr({ batched: s => buf.push(s) });
+  try { PY.py.globals.set('game', PY.py.toPy(snapshot())); await PY.py.runPythonAsync($('#labCode').value); }
+  catch (e) { buf.push(String(e.message || e).trim().split('\n').slice(-3).join('\n')); }
+  out.textContent = buf.join('\n') || '(no output)';
+}
+
+/* ---------- events ---------- */
+function act(name, el) {
+  const id = el.dataset.id, v = el.dataset.v; let r;
+  const say = x => { if (x && !x.ok) { toast(`<i data-lucide="info" class="w-4 h-4"></i><div class="text-sm">${esc(x.msg)}</div>`); AUD.sfx('deny'); } return x; };
+  if (name === 'buy') say(buyNode(id));
+  else if (name === 'heir') say(buyHeir(id));
+  else if (name === 'filt') { filt = v; ui().all = 1; } else if (name === 'stat') { stat = v; ui().all = 1; } else if (name === 'view') { view = v; ui().all = 1; }
+  else if (name === 'showall') { ui().all = ui().all ? 0 : 1; save(); }
+  else if (name === 'undo') say(undoBuy());
+  else if (name === 'route') plan = plan && plan.id === id ? null : { id };
+  else if (name === 'clearplan') plan = null;
+  else if (name === 'buyroute') { if (plan && S.phase !== 'day') buyRoute(routeTo(plan.id).ids); }
+  else if (name === 'bundle') { if (S.phase !== 'day') bestUpgradeBundle().nodes.forEach(n => buyNode(n.id)); }
+  else if (name === 'heirbundle') bestHeirBundle().ids.forEach(hid => buyHeir(hid));
+  else if (name === 'skip') say(toggleSkip(id));
+  else if (name === 'labsort') lab.sort = null;
+  else if (name === 'farm') setPend(id);
+  else if (name === 'cancel') conf = {};
+  else if (name === 'msec') menuSec = v;
+  else if (name === 'back') tab = 'skills';
+  else if (name === 'replay') { replayTips(); tab = 'skills'; toast('<i data-lucide="graduation-cap" class="w-4 h-4"></i><div class="text-sm">Tutorial restarted. Press Play and follow the tips.</div>'); }
+  else if (name === 'prestige') { if (!conf.pres) { conf = { pres: 1 }; } else { conf = {}; r = prestige(); if (r.ok) { fxReset(); layout(); closeModal(); toast(`<i data-lucide="sparkles" class="w-4 h-4"></i><div class="px text-sm">Season ${G.meta.pres} complete, +${r.msg} ◆</div>`); } } }
+  else if (name === 'reset') { if (!conf.reset) conf = { reset: 1 }; else { conf = {}; wipe(); fxReset(); layout(); closeModal(); tab = 'skills'; menuSec = 'stats'; hl = null; plan = null; COACHB.water = 0; COACHB.harv = 0; COACHB.nodes = 0; coachHide(); gateKey = ''; } }
+  else if (name === 'lab') { runLab(); return; }
+  renderPanel(); hud();
+}
+$('#panelBody').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) act(b.dataset.act, b); });
+$('#tabsNav').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; conf = {}; renderPanel(); } });
+$('#btnMenu').addEventListener('click', () => { tab = 'menu'; conf = {}; if (MOBILE.matches) sheet(true); renderPanel(); });
+$('#btnMute').addEventListener('click', () => { const s = G.meta.set; s.mute = s.mute ? 0 : 1; save(); AUD.unlock(); AUD.vols(); muteUI(); if (tab === 'menu' && menuSec === 'settings') renderPanel(); });
+document.addEventListener('click', e => { if (e.target.closest('.goal')) openUpgrades(true); });
+$('#coachX').addEventListener('click', () => { if (COACH.tip) markSeen(COACH.tip.id); coachHide(); });
+$('#panelBody').addEventListener('input', e => {
+  const t = e.target; if (t.id === 'labCode') { labSrc = t.value; return; }
+  const k = t.dataset && t.dataset.set; if (!k) return;
+  G.meta.set[k] = t.type === 'checkbox' ? (t.checked ? 1 : 0) : Number(t.value); save();
+  if (k === 'music' || k === 'sfx' || k === 'mute') { AUD.unlock(); AUD.vols(); muteUI(); }
+  if (k === 'auto') $('#chkAuto').checked = !!G.meta.set.auto; if (k === 'greedy') $('#chkGreedy').checked = !!G.meta.set.greedy;
+});
+$('#panelBody').addEventListener('change', e => {
+  const t = e.target, u = t.dataset && t.dataset.ui, lb = t.dataset && t.dataset.lab;
+  if (u === 'sortK') { sortK = t.value; ui().all = 1; save(); renderPanel(); }
+  else if (lb) { lab[lb] = lb === 'n' || lb === 'idx' ? Number(t.value) : t.value; if (lb !== 'idx') lab.sort = null; renderPanel(); }
+});
+$('#panelBody').addEventListener('toggle', e => {                       // remember which sections the player opened or closed
+  const d = e.target, id = d.dataset && d.dataset.sec; if (!id) return;
+  if (id === 'adv') { if (d.open !== advOpen()) { ui().adv = d.open ? 1 : 0; save(); } } else secOpen[id] = d.open;
+}, true);
+function play() { AUD.unlock(); if (S.paused) { S.paused = false; return; } closeModal(); startDay(); hud(); }
+$('#overlay').addEventListener('click', play); $('#btnPlay').addEventListener('click', play);
+$('#modal').addEventListener('click', e => {
+  if (RV) { cancelReveal(); if (CURRES) finishReveal(CURRES); }
+  if (e.target.closest('#mNext')) { closeModal(); startDay(); hud(); }
+  else if (e.target.closest('#mUp')) { closeModal(); openUpgrades(false); hud(); }
+});
+$('#btnSpeed').addEventListener('click', () => { const s = G.meta.set; s.speed = s.speed >= 4 ? 1 : s.speed * 2; save(); hud(); });
+$('#chkAuto').addEventListener('change', e => { G.meta.set.auto = e.target.checked ? 1 : 0; save(); });
+$('#chkGreedy').addEventListener('change', e => { G.meta.set.greedy = e.target.checked ? 1 : 0; save(); });
+function ptr(e) { const r = cv.getBoundingClientRect(), [gx, gy] = s2w(e.clientX - r.left, e.clientY - r.top); S.mx = gx; S.my = gy; S.mouse = true; if (!S.moved) { S.rx = gx; S.ry = gy; S.moved = 1; } }
+cv.addEventListener('pointermove', ptr); cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch (x) {} ptr(e); });
+cv.addEventListener('pointerleave', () => { S.mouse = false; }); cv.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') S.mouse = false; });
+const pauseNow = () => { if (S.phase === 'day') S.paused = true; };
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseNow(); AUD.vis(!document.hidden); }); window.addEventListener('blur', pauseNow);
+window.addEventListener('resize', () => { layout(); });
+$('#chkAuto').checked = !!G.meta.set.auto; $('#chkGreedy').checked = !!G.meta.set.greedy;
+/* audio unlock + subtle UI sounds */
+['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, () => AUD.unlock(), { capture: true }));
+let lastHover = null;
+document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest && e.target.closest('.btn,.tab,.chip,.goal,.rt,.seg button,summary'); if (el && el !== lastHover) { lastHover = el; AUD.sfx('hover'); } else if (!el) lastHover = null; });
+document.addEventListener('pointerdown', e => { const el = e.target.closest && e.target.closest('button,summary,.goal'); if (el && !el.closest('#cv') && !el.matches('[data-act="buy"],[data-act="heir"]')) AUD.sfx('click'); });
+/* mobile bottom sheet: tap the handle, or drag it up or down */
+let dragY = null, swiped = false;
+$('#sheetHandle').addEventListener('pointerdown', e => { dragY = e.clientY; swiped = false; });
+window.addEventListener('pointerup', e => { if (dragY === null) return; const dy = e.clientY - dragY; dragY = null; if (Math.abs(dy) >= 24) { swiped = true; sheet(dy < 0); } });
+$('#sheetHandle').addEventListener('click', () => { if (swiped) { swiped = false; return; } sheet(!$('#panel').classList.contains('open')); });
+$('#goalD').innerHTML = goalHTML(); $('#goalM').innerHTML = goalHTML();
+
+/* ---------- main loop ---------- */
+let last = performance.now(), accSave = 0, liveT = 0, gateKey = '';
+function fxFrame(dt, now) {
+  const fdt = S.paused ? 0 : dt;
+  FX.step(fdt, fxStep); COIN.step(fdt, coinStep);
+  if (coinArrived) { coinArrived = 0; if (!RM.matches) { const c = $('#chipMoney'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
+  if (shake > 0) shake = Math.max(0, shake - dt);
+  combo.t = Math.max(0, combo.t - fdt * (G.meta.set.speed || 1));
+  const tg = Math.max(0, G.run.money - coinInFlight);                    // the Money chip ticks up as the coins arrive
+  if (RM.matches || tg < shownMoney) shownMoney = tg; else shownMoney += (tg - shownMoney) * Math.min(1, dt * 12); if (Math.abs(tg - shownMoney) < .01) shownMoney = tg;
+  const cb = $('#combo'), show = combo.n >= 2 && combo.t > 0;
+  if (show) { if (combo.shown !== combo.n) { combo.shown = combo.n; cb.textContent = '×' + combo.n + ' combo'; if (!RM.matches) { cb.classList.remove('pop'); void cb.offsetWidth; cb.classList.add('pop'); } } cb.style.opacity = Math.min(1, combo.t / .4).toFixed(2); }
+  else if (hc.cbo !== 0) { hc.cbo = 0; cb.style.opacity = 0; combo.shown = 0; }
+  if (show) hc.cbo = 1;
+  drawCoins();
+}
+function liveCheck(now) {                                               // unlock gates and card affordability, a few times a second
+  if (now - liveT < 300) return; liveT = now;
+  const key = [prestigeUnlocked(), afterPrestige(), advAuto()].join();
+  if (key !== gateKey) { const first = gateKey === ''; gateKey = key; if (!first) renderPanel(); }
+  if (tab !== 'skills') return;
+  let dirty = false;
+  document.querySelectorAll('#panelBody .ucard').forEach(el => {
+    const n = NODE[el.dataset.id]; if (!n) return; const st = NST(n);
+    if (st !== el.dataset.st) dirty = true; else if (st === 'poor') { const i = el.querySelector('.pbar i'); if (i) i.style.width = Math.min(100, G.run.money / n.cost * 100).toFixed(1) + '%'; }
+  });
+  if (dirty) renderPanel();
+}
+function frame(now) {
+  requestAnimationFrame(frame);
+  const lim = G.meta.set.fps; if (lim && now - last < 1000 / lim - 1) return;
+  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (!S.paused) { tick(dt); accSave += dt; if (accSave > 15) { accSave = 0; save(); } }
+  fxFrame(dt, now); drawScene(now / 1000); hud(); goalUpdate(now); coachTick(now); liveCheck(now); AUD.frame(dt);
+}
+shownMoney = G.run.money; layout(); renderPanel(); hud(); icons(); checkAch();
+requestAnimationFrame(frame);
+window.addEventListener('load', () => setTimeout(bootPython, 50));
+window.addEventListener('pagehide', save);
+
+</script>
+
+</body>
+</html>
